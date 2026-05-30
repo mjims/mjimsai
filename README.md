@@ -1,16 +1,28 @@
-# MILA Open — Plateforme d'Agents IA Customisables
+# MjimsAI — Plateforme d'Agents IA Customisables
 
 Créez, personnalisez et déployez des agents IA conversationnels sur n'importe quel site web.
 
 ## ✨ Fonctionnalités
 
 - **Multi-Provider LLM** — Claude (Anthropic), GPT-4o (OpenAI), Gemini (Google), Grok (xAI)
-- **Agents Customisables** — Prompt système, modèle, température, tokens max
+- **Agents Customisables** — Prompt système, modèle, température, tokens max, clé LLM par agent (chiffrée)
 - **Widget Embeddable** — Script JS intégrable sur tout site web
-- **Dashboard Admin** — Interface de gestion des agents et conversations
+- **Dashboard Utilisateur** — Gestion des agents, conversations, abonnements
+- **Backoffice Admin** — CRUD des plans, gestion des utilisateurs, supervision
 - **Base de Connaissances** — Upload PDF, DOCX, TXT, Markdown
 - **Streaming SSE** — Réponses en temps réel
-- **Multi-Tenant (SaaS)** — Organisations, utilisateurs, API keys
+- **Abonnement par agent** — Chaque agent a son propre plan (mensuel / 6 mois / annuel)
+- **Paiements** — Stripe (cartes, EUR) + Sebpay (Mobile Money, XOF, Afrique de l'Ouest)
+- **Multilingue** — Interface FR/EN (next-intl)
+
+## 🏗️ Architecture
+
+Modèle simplifié : **Utilisateur → Agents** (pas d'organisation).
+
+- Un utilisateur crée son compte
+- Il crée des agents liés à son compte
+- Chaque agent porte son propre abonnement (plan + période de facturation)
+- Les plans sont gérés dynamiquement depuis le backoffice (pas codés en dur)
 
 ## 🚀 Démarrage Rapide
 
@@ -22,37 +34,46 @@ cp .env.example .env
 # - POSTGRES_PASSWORD
 # - JWT_SECRET
 # - ADMIN_API_KEY
+# - ENCRYPTION_KEY (Fernet, pour chiffrer les clés LLM par agent)
 # - Au moins une clé API LLM (ANTHROPIC_API_KEY, OPENAI_API_KEY, etc.)
+# - Stripe / Sebpay (optionnel, pour les paiements)
 ```
 
 ### 2. Lancer
 
 ```bash
-docker compose up -d
+docker compose up -d --build
 ```
 
-### 3. Vérifier
+### 3. Appliquer les migrations & seed
+
+```bash
+docker compose exec api alembic upgrade head
+docker compose exec api python -m app.scripts.seed
+```
+
+### 4. Vérifier
 
 ```bash
 curl http://localhost:8080/health
 # → {"status":"healthy","version":"1.0.0","environment":"production"}
 ```
 
-### 4. Créer un compte
+### 5. Créer un compte
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{
-    "org_name": "Mon Entreprise",
-    "org_slug": "mon-entreprise",
     "email": "admin@example.com",
     "username": "admin",
-    "password": "motdepasse123"
+    "password": "motdepasse123",
+    "full_name": "Admin"
   }'
+# → renvoie un token JWT + l'utilisateur (avec sa api_key widget)
 ```
 
-### 5. Créer un agent
+### 6. Créer un agent
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/agents \
@@ -61,48 +82,82 @@ curl -X POST http://localhost:8080/api/v1/agents \
   -d '{
     "name": "Assistant Support",
     "slug": "support",
-    "system_prompt": "Tu es un assistant de support client pour Mon Entreprise...",
+    "system_prompt": "Tu es un assistant de support client...",
     "llm_provider": "anthropic",
     "llm_model": "claude-sonnet-4-20250514"
   }'
 ```
 
-### 6. Intégrer le widget
+### 7. Intégrer le widget
+
+La clé `data-api-key` est la `api_key` de l'utilisateur (visible dans les paramètres du compte).
 
 ```html
 <script
   src="http://localhost:8080/widget.js"
   data-api-url="http://localhost:8080"
-  data-api-key="<org-api-key>"
+  data-api-key="<user-api-key>"
   data-agent="support"
   defer></script>
 ```
 
-## 📁 Architecture
+## 🌐 Services & Ports
+
+| Service     | URL                     | Description                       |
+|-------------|-------------------------|-----------------------------------|
+| API         | http://localhost:8080   | FastAPI + Widget JS               |
+| Frontend    | http://localhost:3000   | Dashboard utilisateur (Next.js)   |
+| Backoffice  | http://localhost:3001   | Admin / CRUD plans (Next.js)      |
+| PostgreSQL  | localhost:5432          | Base de données                   |
+
+## 📁 Structure
 
 ```
-mila-open/
-├── backend/           # FastAPI API + Widget JS
+mjimsai/
+├── backend/              # FastAPI API + Widget JS
 │   ├── app/
-│   │   ├── api/       # Routes (auth, agents, chat, conversations, knowledge)
-│   │   ├── models/    # SQLAlchemy models
-│   │   ├── schemas/   # Pydantic schemas
-│   │   ├── services/  # Business logic + LLM providers
-│   │   └── widget/    # Embeddable chat widget
-│   ├── alembic/       # Database migrations
+│   │   ├── api/          # Routes (auth, agents, chat, conversations, knowledge, billing, admin)
+│   │   ├── models/       # SQLAlchemy (User, Agent, Plan, Conversation, Message, Knowledge, UsageRecord)
+│   │   ├── schemas/      # Pydantic schemas
+│   │   ├── services/     # Logique métier + providers LLM + encryption + usage + billing
+│   │   ├── scripts/      # seed.py
+│   │   └── widget/       # Widget chat embeddable
+│   ├── alembic/          # Migrations
 │   └── Dockerfile
-├── dashboard/         # Next.js admin interface
+├── frontend/             # Dashboard utilisateur (Next.js 16, App Router, next-intl)
+│   ├── app/[locale]/     # Pages localisées (auth, dashboard, agents, billing, settings)
+│   ├── services/         # Axios centralisé (auth, agents, billing, conversations...)
+│   ├── types/ context/ lib/ i18n/
+│   └── Dockerfile
+├── backoffice/           # Admin (Next.js 16)
+│   ├── app/dashboard/    # plans (CRUD), users, system
+│   ├── services/ types/ lib/
+│   └── Dockerfile
 ├── docker-compose.yml
 └── .env.example
 ```
 
+## 💳 Abonnements & Plans
+
+- Les **plans** sont créés/édités/désactivés depuis le backoffice (`/dashboard/plans`).
+- Champs : nom (slug), label, limite de conversations (-1 = illimité), prix EUR & XOF pour 3 périodes (mensuel / 6 mois / annuel), fonctionnalités, actif, ordre.
+- L'abonnement est attaché **à un agent** (onglet « Abonnement » sur la page de l'agent).
+- Quota appliqué à la création de conversation (HTTP 429 si dépassé).
+
+### Sebpay (Mobile Money)
+
+- Opérateurs : `mtn`, `moov`, `orange`, `wav`
+- Téléphone au format international **sans** le `+` (ex : `22997000000`)
+- Webhook signé HMAC-SHA256 (`X-SebPay-Signature`), vérification obligatoire (fail-closed)
+
 ## 🔒 Sécurité
 
 - Mots de passe hachés en bcrypt
-- JWT pour l'authentification dashboard
-- API keys par organisation pour le widget
-- CORS configurables
-- Pas d'exposition de la base de données
+- JWT (`{"sub": user_id}`) pour l'authentification dashboard
+- `api_key` par utilisateur pour le widget
+- Clés LLM par agent chiffrées (Fernet)
+- Webhooks de paiement à signature vérifiée
+- CORS configurables, base de données non exposée
 
 ## 📄 Licence
 

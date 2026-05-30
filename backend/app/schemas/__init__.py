@@ -30,6 +30,9 @@ class AgentCreate(BaseModel):
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
     max_tokens: int = Field(default=2048, ge=100, le=32000)
 
+    # User-provided LLM API key (write-only, never returned in responses)
+    llm_api_key: Optional[str] = Field(None, exclude=True)
+
     welcome_message: str = "Bonjour ! Comment puis-je vous aider ?"
     widget_config: WidgetConfig = Field(default_factory=WidgetConfig)
     max_conversation_turns: int = Field(default=50, ge=1, le=500)
@@ -46,6 +49,10 @@ class AgentUpdate(BaseModel):
     temperature: Optional[float] = Field(None, ge=0.0, le=2.0)
     max_tokens: Optional[int] = Field(None, ge=100, le=32000)
 
+    # User-provided LLM API key (write-only, set None to remove)
+    llm_api_key: Optional[str] = Field(None, exclude=True)
+    remove_api_key: bool = False  # Set to True to remove the stored key
+
     welcome_message: Optional[str] = None
     widget_config: Optional[WidgetConfig] = None
     is_active: Optional[bool] = None
@@ -54,7 +61,7 @@ class AgentUpdate(BaseModel):
 
 class AgentResponse(BaseModel):
     id: uuid.UUID
-    organization_id: uuid.UUID
+    user_id: uuid.UUID
     name: str
     slug: str
     description: Optional[str]
@@ -65,6 +72,14 @@ class AgentResponse(BaseModel):
     llm_model: str
     temperature: float
     max_tokens: int
+
+    llm_api_key_hint: Optional[str] = None
+    has_custom_api_key: bool = False
+
+    # Subscription
+    plan_id: Optional[uuid.UUID] = None
+    billing_period: str = "monthly"
+    subscription_expires_at: Optional[datetime] = None
 
     welcome_message: str
     widget_config: dict
@@ -78,6 +93,35 @@ class AgentResponse(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+    @classmethod
+    def from_orm_agent(cls, agent: object) -> "AgentResponse":
+        return cls(
+            id=agent.id,
+            user_id=agent.user_id,
+            name=agent.name,
+            slug=agent.slug,
+            description=agent.description,
+            avatar_url=agent.avatar_url,
+            system_prompt=agent.system_prompt,
+            llm_provider=agent.llm_provider,
+            llm_model=agent.llm_model,
+            temperature=agent.temperature,
+            max_tokens=agent.max_tokens,
+            llm_api_key_hint=agent.llm_api_key_hint,
+            has_custom_api_key=bool(agent.llm_api_key_encrypted),
+            plan_id=agent.plan_id,
+            billing_period=agent.billing_period,
+            subscription_expires_at=agent.subscription_expires_at,
+            welcome_message=agent.welcome_message,
+            widget_config=agent.widget_config,
+            is_active=agent.is_active,
+            max_conversation_turns=agent.max_conversation_turns,
+            total_conversations=agent.total_conversations,
+            total_messages=agent.total_messages,
+            created_at=agent.created_at,
+            updated_at=agent.updated_at,
+        )
 
 
 class AgentListResponse(BaseModel):

@@ -28,30 +28,41 @@ class Settings(BaseSettings):
     )
 
     # --- Application ---
-    APP_NAME: str = "MILA Open"
+    APP_NAME: str = "MjimsAI"
     APP_VERSION: str = "1.0.0"
     ENVIRONMENT: Environment = Environment.production
     LOG_LEVEL: str = "INFO"
     DEBUG: bool = False
 
     # --- Database ---
-    DATABASE_URL: str = "postgresql+asyncpg://mila:password@localhost:5432/mila"
+    DATABASE_URL: str = "postgresql+asyncpg://mjimsai:password@localhost:5432/mjimsai"
 
     # --- Auth ---
     JWT_SECRET: str = "CHANGE-ME-IN-PRODUCTION-min-32-chars"
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRATION_HOURS: int = 24
     API_KEYS: str = ""  # Comma-separated widget API keys
-    ADMIN_API_KEY: str = ""  # Dashboard → API key
+    ADMIN_API_KEY: str = ""  # Backoffice → API key
 
-    # --- LLM Providers ---
+    # --- LLM Providers (platform-level fallback keys) ---
     ANTHROPIC_API_KEY: Optional[str] = None
     OPENAI_API_KEY: Optional[str] = None
     GOOGLE_API_KEY: Optional[str] = None
     XAI_API_KEY: Optional[str] = None  # Grok (xAI)
 
+    # --- Encryption (Fernet) for per-agent API keys ---
+    # Generate: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    ENCRYPTION_KEY: str = ""
+
+    # --- Payments ---
+    STRIPE_SECRET_KEY: Optional[str] = None
+    STRIPE_WEBHOOK_SECRET: Optional[str] = None
+    SEBPAY_PUBLIC_KEY: Optional[str] = None
+    SEBPAY_SECRET_KEY: Optional[str] = None
+    SEBPAY_ENV: str = "sandbox"  # "sandbox" | "live"
+
     # --- CORS ---
-    CORS_ORIGINS: str = "http://localhost:3000"
+    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3001"
 
     # --- File uploads ---
     MAX_UPLOAD_SIZE_MB: int = 20
@@ -77,6 +88,10 @@ class Settings(BaseSettings):
     @property
     def api_keys_list(self) -> list[str]:
         return [k.strip() for k in self.API_KEYS.split(",") if k.strip()]
+
+    @property
+    def sebpay_base_url(self) -> str:
+        return "https://newapi.sebpay.bj/api/v1"
 
 
 @lru_cache()

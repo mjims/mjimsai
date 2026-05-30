@@ -1,0 +1,58 @@
+export interface Plan {
+  id: string;
+  name: string;
+  label: string;
+  conversations_limit: number;
+  price_monthly_eur: number | null;
+  price_semiannual_eur: number | null;
+  price_annual_eur: number | null;
+  price_monthly_xof: number | null;
+  price_semiannual_xof: number | null;
+  price_annual_xof: number | null;
+  features: string[];
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PlanCreate {
+  name: string;
+  label: string;
+  conversations_limit: number;
+  price_monthly_eur?: number | null;
+  price_semiannual_eur?: number | null;
+  price_annual_eur?: number | null;
+  price_monthly_xof?: number | null;
+  price_semiannual_xof?: number | null;
+  price_annual_xof?: number | null;
+  features: string[];
+  is_active: boolean;
+  sort_order: number;
+}
+
+export interface UserAdminResponse {
+  id: string;
+  email: string;
+  username: string;
+  full_name: string | null;
+  api_key: string;
+  is_active: boolean;
+  is_suspended: boolean;
+  created_at: string;
+  agent_count: number;
+}
+
+export interface UserListAdminResponse {
+  users: UserAdminResponse[];
+  total: number;
+}
+
+export interface PlatformStats {
+  total_users: number;
+  active_users: number;
+  suspended_users: number;
+  total_agents: number;
+  total_conversations_this_month: number;
+  plans: Record<string, number>; // plan_name → agent count
+}

@@ -1,6 +1,4 @@
-"""
-Agent CRUD service — create, update, list, delete agents.
-"""
+"""Agent CRUD service — scoped to user (no organization)."""
 
 from __future__ import annotations
 
@@ -12,26 +10,23 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.agent import Agent
 from app.schemas import AgentCreate, AgentUpdate
+from app.services.encryption import encrypt_api_key, mask_api_key
 
 
 async def create_agent(
     db: AsyncSession,
-    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
     data: AgentCreate,
+    raw_llm_api_key: Optional[str] = None,
 ) -> Agent:
-    """Create a new agent for an organization."""
-    # Check slug uniqueness within org
     existing = await db.execute(
-        select(Agent).where(
-            Agent.organization_id == organization_id,
-            Agent.slug == data.slug,
-        )
+        select(Agent).where(Agent.user_id == user_id, Agent.slug == data.slug)
     )
     if existing.scalar_one_or_none():
-        raise ValueError(f"Agent slug '{data.slug}' already exists in this organization")
+        raise ValueError(f"Agent slug '{data.slug}' already exists")
 
     agent = Agent(
-        organization_id=organization_id,
+        user_id=user_id,
         name=data.name,
         slug=data.slug,
         description=data.description,
@@ -45,6 +40,11 @@ async def create_agent(
         widget_config=data.widget_config.model_dump(),
         max_conversation_turns=data.max_conversation_turns,
     )
+
+    if raw_llm_api_key:
+        agent.llm_api_key_encrypted = encrypt_api_key(raw_llm_api_key)
+        agent.llm_api_key_hint = mask_api_key(raw_llm_api_key)
+
     db.add(agent)
     await db.flush()
     return agent
@@ -54,14 +54,21 @@ async def update_agent(
     db: AsyncSession,
     agent: Agent,
     data: AgentUpdate,
+    raw_llm_api_key: Optional[str] = None,
 ) -> Agent:
-    """Update an existing agent."""
-    update_data = data.model_dump(exclude_unset=True)
+    update_data = data.model_dump(exclude_unset=True, exclude={"llm_api_key", "remove_api_key"})
     if "widget_config" in update_data and update_data["widget_config"] is not None:
         update_data["widget_config"] = data.widget_config.model_dump()
 
     for key, value in update_data.items():
         setattr(agent, key, value)
+
+    if data.remove_api_key:
+        agent.llm_api_key_encrypted = None
+        agent.llm_api_key_hint = None
+    elif raw_llm_api_key:
+        agent.llm_api_key_encrypted = encrypt_api_key(raw_llm_api_key)
+        agent.llm_api_key_hint = mask_api_key(raw_llm_api_key)
 
     await db.flush()
     return agent
@@ -69,66 +76,47 @@ async def update_agent(
 
 async def get_agent_by_id(
     db: AsyncSession,
-    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
     agent_id: uuid.UUID,
 ) -> Optional[Agent]:
-    """Get an agent by ID, scoped to organization."""
     result = await db.execute(
-        select(Agent).where(
-            Agent.id == agent_id,
-            Agent.organization_id == organization_id,
-        )
+        select(Agent).where(Agent.id == agent_id, Agent.user_id == user_id)
     )
     return result.scalar_one_or_none()
 
 
 async def get_agent_by_slug(
     db: AsyncSession,
-    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
     slug: str,
 ) -> Optional[Agent]:
-    """Get an agent by slug, scoped to organization."""
     result = await db.execute(
-        select(Agent).where(
-            Agent.slug == slug,
-            Agent.organization_id == organization_id,
-        )
+        select(Agent).where(Agent.slug == slug, Agent.user_id == user_id)
     )
     return result.scalar_one_or_none()
 
 
 async def list_agents(
     db: AsyncSession,
-    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
     skip: int = 0,
     limit: int = 50,
 ) -> tuple[list[Agent], int]:
-    """List all agents for an organization with pagination."""
-    # Count total
     count_result = await db.execute(
-        select(func.count()).select_from(Agent).where(
-            Agent.organization_id == organization_id
-        )
+        select(func.count()).select_from(Agent).where(Agent.user_id == user_id)
     )
     total = count_result.scalar() or 0
 
-    # Fetch agents
     result = await db.execute(
         select(Agent)
-        .where(Agent.organization_id == organization_id)
+        .where(Agent.user_id == user_id)
         .order_by(Agent.created_at.desc())
         .offset(skip)
         .limit(limit)
     )
-    agents = list(result.scalars().all())
-
-    return agents, total
+    return list(result.scalars().all()), total
 
 
-async def delete_agent(
-    db: AsyncSession,
-    agent: Agent,
-) -> None:
-    """Delete an agent and all associated data (cascaded)."""
+async def delete_agent(db: AsyncSession, agent: Agent) -> None:
     await db.delete(agent)
     await db.flush()

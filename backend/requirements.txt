@@ -12,7 +12,7 @@ greenlet==3.2.2
 # Auth
 python-jose[cryptography]==3.4.0
 passlib[bcrypt]==1.7.4
-bcrypt==4.3.0
+bcrypt==4.0.1
 
 # LLM Providers
 anthropic==0.52.0
@@ -36,3 +36,9 @@ tiktoken==0.9.0
 
 # Streaming
 sse-starlette==2.3.6
+
+# Encryption (per-agent API keys)
+cryptography==43.0.3
+
+# Payments
+stripe==12.0.0

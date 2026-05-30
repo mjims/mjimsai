@@ -11,12 +11,10 @@ from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.api.deps import get_current_user, get_current_organization
+from app.api.deps import get_current_user
 from app.database import get_db
 from app.models.agent import Agent
 from app.models.conversation import Conversation
-from app.models.message import Message
-from app.models.organization import Organization
 from app.models.user import User
 from app.schemas.chat import (
     ConversationListItem,
@@ -35,21 +33,16 @@ async def list_conversations(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     user: User = Depends(get_current_user),
-    org: Organization = Depends(get_current_organization),
     db: AsyncSession = Depends(get_db),
 ):
-    """List conversations for the organization with optional filters."""
-    # Build base query scoped to org's agents
-    org_agents_subquery = select(Agent.id).where(Agent.organization_id == org.id)
+    """List conversations for the current user's agents."""
+    user_agents_subquery = select(Agent.id).where(Agent.user_id == user.id)
 
-    query = select(Conversation).where(
-        Conversation.agent_id.in_(org_agents_subquery)
-    )
+    query = select(Conversation).where(Conversation.agent_id.in_(user_agents_subquery))
     count_query = select(func.count()).select_from(Conversation).where(
-        Conversation.agent_id.in_(org_agents_subquery)
+        Conversation.agent_id.in_(user_agents_subquery)
     )
 
-    # Apply filters
     if agent_id:
         query = query.where(Conversation.agent_id == agent_id)
         count_query = count_query.where(Conversation.agent_id == agent_id)
@@ -57,11 +50,7 @@ async def list_conversations(
         query = query.where(Conversation.status == status_filter)
         count_query = count_query.where(Conversation.status == status_filter)
 
-    # Get total count
-    total_result = await db.execute(count_query)
-    total = total_result.scalar() or 0
-
-    # Fetch conversations with pagination
+    total = (await db.execute(count_query)).scalar() or 0
     offset = (page - 1) * page_size
     result = await db.execute(
         query
@@ -74,7 +63,6 @@ async def list_conversations(
 
     items = []
     for conv in conversations:
-        msg_count = len(conv.messages)
         last_msg = conv.messages[-1] if conv.messages else None
         items.append(ConversationListItem(
             id=conv.id,
@@ -82,43 +70,32 @@ async def list_conversations(
             visitor_id=conv.visitor_id,
             status=conv.status,
             summary=conv.summary,
-            message_count=msg_count,
+            message_count=len(conv.messages),
             last_message_at=last_msg.created_at if last_msg else None,
             created_at=conv.created_at,
         ))
 
-    return ConversationListResponse(
-        conversations=items,
-        total=total,
-        page=page,
-        page_size=page_size,
-    )
+    return ConversationListResponse(conversations=items, total=total, page=page, page_size=page_size)
 
 
 @router.get("/{conversation_id}", response_model=ConversationResponse)
 async def get_conversation(
     conversation_id: uuid.UUID,
     user: User = Depends(get_current_user),
-    org: Organization = Depends(get_current_organization),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get a conversation with all its messages."""
-    org_agents_subquery = select(Agent.id).where(Agent.organization_id == org.id)
-
+    user_agents_subquery = select(Agent.id).where(Agent.user_id == user.id)
     result = await db.execute(
         select(Conversation)
         .options(selectinload(Conversation.messages))
         .where(
             Conversation.id == conversation_id,
-            Conversation.agent_id.in_(org_agents_subquery),
+            Conversation.agent_id.in_(user_agents_subquery),
         )
     )
     conv = result.scalar_one_or_none()
     if not conv:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Conversation not found",
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
 
     return ConversationResponse(
         id=conv.id,
@@ -137,22 +114,17 @@ async def get_conversation(
 async def close_conversation(
     conversation_id: uuid.UUID,
     user: User = Depends(get_current_user),
-    org: Organization = Depends(get_current_organization),
     db: AsyncSession = Depends(get_db),
 ):
-    """Close/archive a conversation."""
-    org_agents_subquery = select(Agent.id).where(Agent.organization_id == org.id)
+    user_agents_subquery = select(Agent.id).where(Agent.user_id == user.id)
     result = await db.execute(
         select(Conversation).where(
             Conversation.id == conversation_id,
-            Conversation.agent_id.in_(org_agents_subquery),
+            Conversation.agent_id.in_(user_agents_subquery),
         )
     )
     conv = result.scalar_one_or_none()
     if not conv:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Conversation not found",
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
     conv.status = "closed"
-    await db.flush()
+    await db.commit()

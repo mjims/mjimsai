@@ -6,16 +6,16 @@
 # --- Stage 1: Build dependencies ---
 FROM python:3.12-slim AS builder
 
-WORKDIR /build
+WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc libpq-dev && \
     rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-RUN python -m venv /build/.venv && \
-    /build/.venv/bin/pip install --no-cache-dir --upgrade pip && \
-    /build/.venv/bin/pip install --no-cache-dir -r requirements.txt
+RUN python -m venv /app/.venv && \
+    /app/.venv/bin/pip install --no-cache-dir --upgrade pip && \
+    /app/.venv/bin/pip install --no-cache-dir -r requirements.txt
 
 # --- Stage 2: Runtime ---
 FROM python:3.12-slim
@@ -33,7 +33,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # Copy virtualenv from builder
-COPY --from=builder --chown=appuser:appuser /build/.venv .venv
+COPY --from=builder --chown=appuser:appuser /app/.venv .venv
 
 # Copy application code
 COPY --chown=appuser:appuser app/ app/

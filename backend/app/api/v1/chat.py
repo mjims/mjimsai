@@ -1,6 +1,6 @@
 """
 Chat routes — widget-facing endpoints for conversations.
-Supports both regular and streaming (SSE) responses.
+Auth via X-API-Key header (user's api_key). Supports SSE streaming.
 """
 
 from __future__ import annotations
@@ -9,15 +9,14 @@ import json
 import logging
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import validate_widget_key
 from app.database import get_db
-from app.models.agent import Agent
-from app.models.organization import Organization
+from app.models.user import User
 from app.schemas import AgentPublicConfig
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.services import chat_service
@@ -30,23 +29,21 @@ router = APIRouter(prefix="/chat", tags=["Chat"])
 @router.get("/agent/{agent_slug}/config", response_model=AgentPublicConfig)
 async def get_agent_config(
     agent_slug: str,
-    org: Organization = Depends(validate_widget_key),
+    user: User = Depends(validate_widget_key),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get public agent configuration for the widget (no auth required beyond API key)."""
+    """Get public agent configuration for the widget."""
+    from app.models.agent import Agent
     result = await db.execute(
         select(Agent).where(
-            Agent.organization_id == org.id,
+            Agent.user_id == user.id,
             Agent.slug == agent_slug,
             Agent.is_active == True,  # noqa: E712
         )
     )
     agent = result.scalar_one_or_none()
     if not agent:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Agent not found",
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
     return AgentPublicConfig.model_validate(agent)
 
 
@@ -54,37 +51,30 @@ async def get_agent_config(
 async def send_message(
     agent_slug: str,
     data: ChatRequest,
-    org: Organization = Depends(validate_widget_key),
+    user: User = Depends(validate_widget_key),
     db: AsyncSession = Depends(get_db),
 ):
-    """Send a message to an agent and get a response (non-streaming)."""
+    """Send a message and get a response (non-streaming)."""
+    from app.models.agent import Agent
     result = await db.execute(
         select(Agent).where(
-            Agent.organization_id == org.id,
+            Agent.user_id == user.id,
             Agent.slug == agent_slug,
             Agent.is_active == True,  # noqa: E712
         )
     )
     agent = result.scalar_one_or_none()
     if not agent:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Agent not found",
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
 
-    # Get or create conversation
     conversation = await chat_service.get_or_create_conversation(
         db, agent, data.visitor_id, data.conversation_id, data.metadata,
     )
-
-    # Process the message
-    response = await chat_service.process_chat_message(
-        db, agent, conversation, data.message,
-    )
+    response = await chat_service.process_chat_message(db, agent, conversation, data.message)
 
     return ChatResponse(
         conversation_id=conversation.id,
-        message_id=uuid.uuid4(),  # Simplified for response
+        message_id=uuid.uuid4(),
         content=response.content,
         tokens_input=response.tokens_input,
         tokens_output=response.tokens_output,
@@ -95,38 +85,31 @@ async def send_message(
 async def stream_message(
     agent_slug: str,
     data: ChatRequest,
-    org: Organization = Depends(validate_widget_key),
+    user: User = Depends(validate_widget_key),
     db: AsyncSession = Depends(get_db),
 ):
     """Send a message and stream the response via SSE."""
+    from app.models.agent import Agent
     result = await db.execute(
         select(Agent).where(
-            Agent.organization_id == org.id,
+            Agent.user_id == user.id,
             Agent.slug == agent_slug,
             Agent.is_active == True,  # noqa: E712
         )
     )
     agent = result.scalar_one_or_none()
     if not agent:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Agent not found",
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
 
     conversation = await chat_service.get_or_create_conversation(
         db, agent, data.visitor_id, data.conversation_id, data.metadata,
     )
 
     async def event_generator():
-        # Send conversation ID first
         yield f"data: {json.dumps({'type': 'meta', 'conversation_id': str(conversation.id)})}\n\n"
-
         try:
-            async for chunk in chat_service.stream_chat_message(
-                db, agent, conversation, data.message,
-            ):
+            async for chunk in chat_service.stream_chat_message(db, agent, conversation, data.message):
                 yield f"data: {json.dumps({'type': 'chunk', 'content': chunk})}\n\n"
-
             yield f"data: {json.dumps({'type': 'done'})}\n\n"
         except Exception as e:
             logger.error(f"Stream error: {e}")
@@ -135,9 +118,5 @@ async def stream_message(
     return StreamingResponse(
         event_generator(),
         media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
     )

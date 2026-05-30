@@ -1,0 +1,158 @@
+{
+  "nav": {
+    "home": "Home",
+    "pricing": "Pricing",
+    "about": "About",
+    "contact": "Contact",
+    "login": "Login",
+    "getStarted": "Get started for free"
+  },
+  "home": {
+    "hero": {
+      "badge": "AI SaaS Platform",
+      "title": "Build AI agents for your clients",
+      "subtitle": "Deploy intelligent conversational chatbots on any website. Multi-provider, multilingual, fully customizable.",
+      "cta": "Get started for free",
+      "ctaSecondary": "View pricing"
+    },
+    "features": {
+      "title": "Everything you need",
+      "multiProvider": {
+        "title": "Multi-Provider LLM",
+        "desc": "Claude, GPT-4o, Gemini, Grok. Use your own API key."
+      },
+      "widget": {
+        "title": "Embeddable Widget",
+        "desc": "A JS script to embed on any website in 2 lines."
+      },
+      "knowledge": {
+        "title": "Knowledge Base",
+        "desc": "Upload PDF, DOCX, TXT documents for precise answers."
+      },
+      "analytics": {
+        "title": "Analytics",
+        "desc": "Track conversations and optimize your agents in real time."
+      }
+    }
+  },
+  "pricing": {
+    "title": "Simple, transparent pricing",
+    "subtitle": "Start for free. Upgrade as you grow.",
+    "perMonth": "/month",
+    "free": "Free",
+    "popular": "Popular",
+    "cta": "Get started",
+    "ctaEnterprise": "Contact us",
+    "unlimited": "Unlimited",
+    "conversations": "conversations/month"
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in",
+      "subtitle": "Access your MjimsAI space",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Sign in",
+      "noAccount": "No account yet?",
+      "register": "Create an account",
+      "error": "Invalid email or password"
+    },
+    "register": {
+      "title": "Create your account",
+      "subtitle": "Join MjimsAI and create your first AI agents",
+      "email": "Email",
+      "username": "Username",
+      "password": "Password",
+      "submit": "Create my account",
+      "hasAccount": "Already have an account?",
+      "login": "Sign in"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Overview of your AI platform",
+    "stats": {
+      "activeAgents": "Active agents",
+      "conversations": "Conversations",
+      "messages": "Messages",
+      "usage": "Usage this month"
+    },
+    "recentAgents": "Your Agents",
+    "viewAll": "View all →",
+    "noAgents": {
+      "title": "No agents created",
+      "desc": "Create your first AI agent and start embedding it on your websites.",
+      "cta": "Create an agent"
+    }
+  },
+  "agents": {
+    "title": "AI Agents",
+    "new": "New agent",
+    "edit": "Edit",
+    "delete": "Delete",
+    "active": "Active",
+    "inactive": "Inactive",
+    "conversations": "conversations",
+    "messages": "messages",
+    "noAgents": "No agents",
+    "tabs": {
+      "config": "Configuration",
+      "knowledge": "Knowledge base",
+      "integration": "Integration",
+      "apiKey": "API Key"
+    },
+    "apiKey": {
+      "title": "LLM API Key",
+      "desc": "Use your own API key for this provider. If absent, the platform key is used.",
+      "current": "Current key",
+      "update": "Update key",
+      "remove": "Remove key",
+      "placeholder": "sk-ant-... or sk-... or your key"
+    }
+  },
+  "billing": {
+    "title": "Subscription & Billing",
+    "currentPlan": "Current plan",
+    "usage": "Usage this month",
+    "conversations": "conversations",
+    "upgrade": "Upgrade plan",
+    "payCard": "Pay by card",
+    "payMobile": "Mobile Money (Africa)",
+    "phone": "Phone number",
+    "operator": "Operator",
+    "free": "Free",
+    "unlimited": "Unlimited"
+  },
+  "settings": {
+    "title": "Settings",
+    "orgInfo": "Organization information",
+    "apiKey": "Widget API Key",
+    "copyKey": "Copy",
+    "copied": "Copied!"
+  },
+  "conversations": {
+    "title": "Conversations",
+    "agent": "Agent",
+    "visitor": "Visitor",
+    "messages": "messages",
+    "status": {
+      "active": "Active",
+      "closed": "Closed",
+      "archived": "Archived"
+    },
+    "close": "Close conversation"
+  },
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "search": "Search",
+    "noData": "No data",
+    "error": "An error occurred"
+  }
+}

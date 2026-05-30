@@ -1,4 +1,4 @@
-"""Agent model — the core entity: a customizable AI agent."""
+"""Agent model — customizable AI agent, owned directly by a user."""
 
 from __future__ import annotations
 
@@ -18,8 +18,8 @@ class Agent(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    organization_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
 
     # --- Identity ---
@@ -34,14 +34,14 @@ class Agent(Base):
         nullable=False,
         default="You are a helpful AI assistant. Answer questions clearly and concisely.",
     )
-    llm_provider: Mapped[str] = mapped_column(
-        String(50), nullable=False, default="anthropic"
-    )  # anthropic, openai, gemini, grok
-    llm_model: Mapped[str] = mapped_column(
-        String(100), nullable=False, default="claude-sonnet-4-20250514"
-    )
+    llm_provider: Mapped[str] = mapped_column(String(50), nullable=False, default="anthropic")
+    llm_model: Mapped[str] = mapped_column(String(100), nullable=False, default="claude-sonnet-4-20250514")
     temperature: Mapped[float] = mapped_column(Float, default=0.7)
     max_tokens: Mapped[int] = mapped_column(Integer, default=2048)
+
+    # --- Per-agent LLM API key (user-provided, Fernet-encrypted) ---
+    llm_api_key_encrypted: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    llm_api_key_hint: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     # --- Widget appearance ---
     welcome_message: Mapped[str] = mapped_column(
@@ -58,6 +58,15 @@ class Agent(Base):
             "font_family": "Inter, sans-serif",
         },
     )
+
+    # --- Subscription (per-agent plan) ---
+    plan_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("plans.id", ondelete="SET NULL"), nullable=True
+    )
+    billing_period: Mapped[str] = mapped_column(String(20), default="monthly")  # monthly | semiannual | annual
+    subscription_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    stripe_subscription_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    sebpay_subscription_ref: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # --- Behaviour ---
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -77,13 +86,10 @@ class Agent(Base):
     )
 
     # Relationships
-    organization = relationship("Organization", back_populates="agents")
-    conversations = relationship(
-        "Conversation", back_populates="agent", cascade="all, delete-orphan"
-    )
-    knowledge_documents = relationship(
-        "KnowledgeDocument", back_populates="agent", cascade="all, delete-orphan"
-    )
+    user = relationship("User", back_populates="agents")
+    plan = relationship("Plan", back_populates="agents", foreign_keys=[plan_id])
+    conversations = relationship("Conversation", back_populates="agent", cascade="all, delete-orphan")
+    knowledge_documents = relationship("KnowledgeDocument", back_populates="agent", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"<Agent {self.slug} ({self.llm_provider}/{self.llm_model})>"

@@ -51,8 +51,3 @@ def decode_access_token(token: str) -> Optional[dict]:
 def generate_api_key() -> str:
     """Generate a secure random API key."""
     return secrets.token_hex(32)
-
-
-def validate_widget_api_key(api_key: str, org_api_key: str) -> bool:
-    """Check if the provided API key matches the organization's key."""
-    return secrets.compare_digest(api_key, org_api_key)

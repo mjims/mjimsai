@@ -1,0 +1,158 @@
+{
+  "nav": {
+    "home": "Accueil",
+    "pricing": "Tarifs",
+    "about": "À propos",
+    "contact": "Contact",
+    "login": "Connexion",
+    "getStarted": "Commencer gratuitement"
+  },
+  "home": {
+    "hero": {
+      "badge": "Plateforme IA SaaS",
+      "title": "Créez des agents IA pour vos clients",
+      "subtitle": "Déployez des chatbots conversationnels intelligents sur n'importe quel site. Multi-provider, multilingue, entièrement personnalisable.",
+      "cta": "Commencer gratuitement",
+      "ctaSecondary": "Voir les tarifs"
+    },
+    "features": {
+      "title": "Tout ce dont vous avez besoin",
+      "multiProvider": {
+        "title": "Multi-Provider LLM",
+        "desc": "Claude, GPT-4o, Gemini, Grok. Utilisez votre propre clé API."
+      },
+      "widget": {
+        "title": "Widget Embeddable",
+        "desc": "Un script JS à intégrer sur n'importe quel site en 2 lignes."
+      },
+      "knowledge": {
+        "title": "Base de Connaissances",
+        "desc": "Uploadez vos documents PDF, DOCX, TXT pour des réponses précises."
+      },
+      "analytics": {
+        "title": "Analytics",
+        "desc": "Suivez les conversations et optimisez vos agents en temps réel."
+      }
+    }
+  },
+  "pricing": {
+    "title": "Des tarifs simples et transparents",
+    "subtitle": "Commencez gratuitement. Passez à l'offre supérieure quand vous grandissez.",
+    "perMonth": "/mois",
+    "free": "Gratuit",
+    "popular": "Populaire",
+    "cta": "Commencer",
+    "ctaEnterprise": "Nous contacter",
+    "unlimited": "Illimité",
+    "conversations": "conversations/mois"
+  },
+  "auth": {
+    "login": {
+      "title": "Connexion",
+      "subtitle": "Accédez à votre espace MjimsAI",
+      "email": "Email",
+      "password": "Mot de passe",
+      "submit": "Se connecter",
+      "noAccount": "Pas encore de compte ?",
+      "register": "Créer un compte",
+      "error": "Email ou mot de passe incorrect"
+    },
+    "register": {
+      "title": "Créer votre compte",
+      "subtitle": "Rejoignez MjimsAI et créez vos premiers agents IA",
+      "email": "Email",
+      "username": "Nom d'utilisateur",
+      "password": "Mot de passe",
+      "submit": "Créer mon compte",
+      "hasAccount": "Déjà un compte ?",
+      "login": "Se connecter"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Vue d'ensemble de votre plateforme IA",
+    "stats": {
+      "activeAgents": "Agents actifs",
+      "conversations": "Conversations",
+      "messages": "Messages",
+      "usage": "Utilisation ce mois"
+    },
+    "recentAgents": "Vos Agents",
+    "viewAll": "Voir tout →",
+    "noAgents": {
+      "title": "Aucun agent créé",
+      "desc": "Créez votre premier agent IA et commencez à l'intégrer sur vos sites.",
+      "cta": "Créer un agent"
+    }
+  },
+  "agents": {
+    "title": "Agents IA",
+    "new": "Nouvel agent",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "active": "Actif",
+    "inactive": "Inactif",
+    "conversations": "conversations",
+    "messages": "messages",
+    "noAgents": "Aucun agent",
+    "tabs": {
+      "config": "Configuration",
+      "knowledge": "Base de connaissances",
+      "integration": "Intégration",
+      "apiKey": "Clé API"
+    },
+    "apiKey": {
+      "title": "Clé API LLM",
+      "desc": "Utilisez votre propre clé API pour ce provider. Si absente, la clé plateforme est utilisée.",
+      "current": "Clé actuelle",
+      "update": "Mettre à jour la clé",
+      "remove": "Supprimer la clé",
+      "placeholder": "sk-ant-... ou sk-... ou votre clé"
+    }
+  },
+  "billing": {
+    "title": "Abonnement & Facturation",
+    "currentPlan": "Plan actuel",
+    "usage": "Utilisation ce mois",
+    "conversations": "conversations",
+    "upgrade": "Passer au plan supérieur",
+    "payCard": "Payer par carte",
+    "payMobile": "Mobile Money (Afrique)",
+    "phone": "Numéro de téléphone",
+    "operator": "Opérateur",
+    "free": "Gratuit",
+    "unlimited": "Illimité"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "orgInfo": "Informations de l'organisation",
+    "apiKey": "Clé API Widget",
+    "copyKey": "Copier",
+    "copied": "Copié !"
+  },
+  "conversations": {
+    "title": "Conversations",
+    "agent": "Agent",
+    "visitor": "Visiteur",
+    "messages": "messages",
+    "status": {
+      "active": "Active",
+      "closed": "Fermée",
+      "archived": "Archivée"
+    },
+    "close": "Fermer la conversation"
+  },
+  "common": {
+    "loading": "Chargement...",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "back": "Retour",
+    "next": "Suivant",
+    "previous": "Précédent",
+    "search": "Rechercher",
+    "noData": "Aucune donnée",
+    "error": "Une erreur est survenue"
+  }
+}
