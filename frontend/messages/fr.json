@@ -57,7 +57,8 @@
       "register": "Créer un compte",
       "error": "Email ou mot de passe incorrect",
       "remember": "Se souvenir de moi",
-      "emailNotVerified": "Email non vérifié. Saisissez le code reçu."
+      "emailNotVerified": "Email non vérifié. Saisissez le code reçu.",
+      "forgotPassword": "Mot de passe oublié ?"
     },
     "register": {
       "title": "Créer votre compte",
@@ -77,6 +78,22 @@
       "submit": "Valider",
       "resend": "Renvoyer le code",
       "sent": "Code renvoyé.",
+      "error": "Code invalide ou expiré"
+    },
+    "forgot": {
+      "title": "Mot de passe oublié",
+      "subtitle": "Entrez votre email, nous vous enverrons un code de réinitialisation.",
+      "email": "Email",
+      "submit": "Envoyer le code",
+      "sent": "Si ce compte existe, un code a été envoyé.",
+      "back": "← Retour à la connexion"
+    },
+    "reset": {
+      "title": "Réinitialiser le mot de passe",
+      "subtitle": "Code envoyé à",
+      "code": "Code de vérification",
+      "newPassword": "Nouveau mot de passe",
+      "submit": "Réinitialiser",
       "error": "Code invalide ou expiré"
     }
   },

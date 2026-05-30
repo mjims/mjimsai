@@ -64,3 +64,14 @@ class UpdateProfileRequest(BaseModel):
     email: Optional[EmailStr] = None
     current_password: Optional[str] = None
     new_password: Optional[str] = Field(None, min_length=8)
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    code: str = Field(..., min_length=4, max_length=10)
+    new_password: str = Field(..., min_length=8)
+    remember: bool = False

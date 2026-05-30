@@ -8,8 +8,7 @@ import { agentsService } from "@/services/agents.service";
 import { knowledgeService } from "@/services/knowledge.service";
 import { billingService } from "@/services/billing.service";
 import { getApiError } from "@/lib/axios";
-import type { Agent, AgentSubscription, BillingPeriod, KnowledgeDocument, Plan, SebpayOperator } from "@/types";
-import { SEBPAY_OPERATORS } from "@/types";
+import type { Agent, AgentSubscription, BillingPeriod, KnowledgeDocument, PaymentMethods, Plan, SebpayCountry, SebpayOperatorOption } from "@/types";
 
 type Tab = "config" | "knowledge" | "subscription" | "apiKey" | "integration";
 
@@ -53,9 +52,13 @@ export default function AgentDetailPage() {
   const [payMode, setPayMode] = useState<"stripe" | "sebpay" | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [phone, setPhone] = useState("");
-  const [operator, setOperator] = useState<SebpayOperator>("mtn");
+  const [operator, setOperator] = useState("");
   const [paying, setPaying] = useState(false);
   const [payMsg, setPayMsg] = useState("");
+  const [payMethods, setPayMethods] = useState<PaymentMethods | null>(null);
+  const [countries, setCountries] = useState<SebpayCountry[]>([]);
+  const [operators, setOperators] = useState<SebpayOperatorOption[]>([]);
+  const [country, setCountry] = useState("");
 
   // API key tab
   const [newApiKey, setNewApiKey] = useState("");
@@ -72,14 +75,18 @@ export default function AgentDetailPage() {
         setAgent(a);
         setForm({ name: a.name, system_prompt: a.system_prompt, temperature: a.temperature, max_tokens: a.max_tokens, welcome_message: a.welcome_message });
         setPeriod(a.billing_period as BillingPeriod);
-        const [d, p, s] = await Promise.all([
+        const [d, p, s, pm, c] = await Promise.all([
           knowledgeService.list(id).catch(() => []),
           billingService.getPlans().catch(() => []),
           billingService.getAgentSubscription(id).catch(() => null),
+          billingService.getPaymentMethods().catch(() => null),
+          billingService.getSebpayCountries().catch(() => []),
         ]);
         setDocs(d);
         setPlans(p);
         setSub(s);
+        setPayMethods(pm);
+        setCountries(c);
       } catch { router.push("/dashboard/agents"); }
       finally { setLoading(false); }
     }
@@ -112,8 +119,24 @@ export default function AgentDetailPage() {
     finally { setPaying(false); }
   }
 
+  async function loadOperators(countryCode: string) {
+    try {
+      const ops = await billingService.getSebpayOperators(countryCode || undefined);
+      setOperators(ops);
+      setOperator(ops[0]?.slug || "");
+    } catch { setOperators([]); }
+  }
+
+  async function openSebpay(plan: Plan) {
+    setSelectedPlan(plan);
+    setPayMode("sebpay");
+    const firstCountry = countries[0]?.code || "";
+    setCountry(firstCountry);
+    await loadOperators(firstCountry);
+  }
+
   async function handleSebpaySubscribe() {
-    if (!agent || !selectedPlan || !phone) return;
+    if (!agent || !selectedPlan || !phone || !operator || !country) return;
     // Strip leading + from phone (Sebpay requires international format without +)
     const cleanPhone = phone.replace(/^\+/, "");
     setPaying(true); setPayMsg("");
@@ -123,7 +146,7 @@ export default function AgentDetailPage() {
         billing_period: period,
         phone: cleanPhone,
         operator,
-        country: "BJ",
+        country,
       });
       if (result.provider_link) {
         window.open(result.provider_link, "_blank");
@@ -327,14 +350,21 @@ export default function AgentDetailPage() {
                     </p>
                     {!isCurrent && plan.name !== "free" && plan.name !== "enterprise" && (
                       <div className="flex flex-col gap-2">
-                        <button onClick={() => handleStripeSubscribe(plan)} disabled={paying}
-                          className="w-full py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-xl disabled:opacity-60">
-                          💳 Payer par carte
-                        </button>
-                        <button onClick={() => { setSelectedPlan(plan); setPayMode("sebpay"); }}
-                          className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-xl">
-                          📱 Mobile Money
-                        </button>
+                        {payMethods?.stripe.enabled && (
+                          <button onClick={() => handleStripeSubscribe(plan)} disabled={paying}
+                            className="w-full py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-xl disabled:opacity-60">
+                            💳 Payer par carte
+                          </button>
+                        )}
+                        {payMethods?.sebpay.enabled && (
+                          <button onClick={() => openSebpay(plan)}
+                            className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-xl">
+                            📱 Mobile Money
+                          </button>
+                        )}
+                        {!payMethods?.stripe.enabled && !payMethods?.sebpay.enabled && (
+                          <p className="text-xs text-surface-400 text-center">Aucun moyen de paiement disponible.</p>
+                        )}
                       </div>
                     )}
                     {plan.name === "enterprise" && (
@@ -362,6 +392,15 @@ export default function AgentDetailPage() {
                 </p>
                 <div className="space-y-3">
                   <div>
+                    <label className="block text-sm font-medium text-surface-700 mb-1">Pays</label>
+                    <select value={country} onChange={(e) => { setCountry(e.target.value); loadOperators(e.target.value); }}
+                      className="w-full px-4 py-3 rounded-xl border border-surface-200 focus:border-primary-400 outline-none text-sm bg-white">
+                      {countries.map((c) => (
+                        <option key={c.id} value={c.code}>{c.name} ({c.prefix})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium text-surface-700 mb-1">Téléphone (sans +)</label>
                     <input value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" placeholder="22997000000"
                       className="w-full px-4 py-3 rounded-xl border border-surface-200 focus:border-primary-400 outline-none text-sm" />
@@ -369,10 +408,11 @@ export default function AgentDetailPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-surface-700 mb-1">Opérateur</label>
-                    <select value={operator} onChange={(e) => setOperator(e.target.value as SebpayOperator)}
+                    <select value={operator} onChange={(e) => setOperator(e.target.value)}
                       className="w-full px-4 py-3 rounded-xl border border-surface-200 focus:border-primary-400 outline-none text-sm bg-white">
-                      {SEBPAY_OPERATORS.map((op) => (
-                        <option key={op.value} value={op.value}>{op.label}</option>
+                      {operators.length === 0 && <option value="">Aucun opérateur</option>}
+                      {operators.map((op) => (
+                        <option key={op.id} value={op.slug}>{op.label}</option>
                       ))}
                     </select>
                   </div>

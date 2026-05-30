@@ -1,9 +1,24 @@
 import apiClient from "@/lib/axios";
-import type { AgentSubscription, BillingPeriod, Plan, SebpayOperator } from "@/types";
+import type { AgentSubscription, BillingPeriod, PaymentMethods, Plan, SebpayCountry, SebpayOperatorOption } from "@/types";
 
 export const billingService = {
   async getPlans(): Promise<Plan[]> {
     const { data } = await apiClient.get<Plan[]>("/api/v1/billing/plans");
+    return data;
+  },
+
+  async getPaymentMethods(): Promise<PaymentMethods> {
+    const { data } = await apiClient.get<PaymentMethods>("/api/v1/billing/payment-methods");
+    return data;
+  },
+
+  async getSebpayCountries(): Promise<SebpayCountry[]> {
+    const { data } = await apiClient.get<SebpayCountry[]>("/api/v1/billing/sebpay/countries");
+    return data;
+  },
+
+  async getSebpayOperators(country?: string): Promise<SebpayOperatorOption[]> {
+    const { data } = await apiClient.get<SebpayOperatorOption[]>("/api/v1/billing/sebpay/operators", { params: country ? { country } : {} });
     return data;
   },
 
@@ -26,7 +41,7 @@ export const billingService = {
     plan_id: string;
     billing_period: BillingPeriod;
     phone: string;          // without +
-    operator: SebpayOperator;
+    operator: string;
     country?: string;
   }): Promise<{ transaction_id: string; status: string; provider_link?: string; reference: string }> {
     const { data } = await apiClient.post(`/api/v1/billing/agents/${agentId}/subscribe/sebpay`, params);

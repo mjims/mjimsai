@@ -180,12 +180,27 @@ export interface KnowledgeDocument {
 // --- LLM Providers ---
 export type ProvidersMap = Record<string, string[]>;
 
-// Sebpay operators (exact slugs per API docs)
-export const SEBPAY_OPERATORS = [
-  { value: "mtn", label: "MTN Mobile Money" },
-  { value: "moov", label: "Moov Africa" },
-  { value: "orange", label: "Orange Money" },
-  { value: "wave", label: "Wave" },
-] as const;
+// --- Payments ---
+export interface PaymentMethods {
+  stripe: { enabled: boolean };
+  sebpay: { enabled: boolean };
+}
 
-export type SebpayOperator = typeof SEBPAY_OPERATORS[number]["value"];
+export interface SebpayCountry {
+  id: string;
+  code: string;
+  name: string;
+  prefix: string;
+  currency: string;
+  is_active: boolean;
+  sort_order: number;
+}
+
+export interface SebpayOperatorOption {
+  id: string;
+  slug: string;
+  label: string;
+  country_code: string | null;
+  is_active: boolean;
+  sort_order: number;
+}

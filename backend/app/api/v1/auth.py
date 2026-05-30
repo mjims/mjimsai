@@ -15,10 +15,12 @@ from app.api.deps import get_current_user
 from app.models.user import User
 from app.ratelimit import limiter
 from app.schemas.auth import (
+    ForgotPasswordRequest,
     LoginRequest,
     RegisterRequest,
     RegisterResponse,
     ResendOtpRequest,
+    ResetPasswordRequest,
     TokenResponse,
     UpdateProfileRequest,
     UserResponse,
@@ -124,6 +126,40 @@ async def login(request: Request, data: LoginRequest, db: AsyncSession = Depends
 
     if not user.email_verified:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="email_not_verified")
+
+    return TokenResponse(access_token=_token_for(user, data.remember), user=UserResponse.model_validate(user))
+
+
+@router.post("/forgot-password", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("3/minute")
+async def forgot_password(request: Request, data: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+    """Send a password-reset OTP. Always 204 (anti-enumeration)."""
+    result = await db.execute(select(User).where(User.email == data.email))
+    user = result.scalar_one_or_none()
+    if user:
+        await otp_service.create_and_send_otp(
+            db, email=user.email, purpose="password_reset",
+            subject_type="user", subject_id=user.id,
+        )
+
+
+@router.post("/reset-password", response_model=TokenResponse)
+@limiter.limit("10/minute")
+async def reset_password(request: Request, data: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+    """Verify the reset OTP, set a new password, and auto-login."""
+    ok = await otp_service.verify_otp(db, data.email, "password_reset", data.code)
+    if not ok:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired code")
+
+    result = await db.execute(select(User).where(User.email == data.email))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    user.password_hash = hash_password(data.new_password)
+    user.email_verified = True  # proven email control via the OTP
+    await db.commit()
+    await db.refresh(user)
 
     return TokenResponse(access_token=_token_for(user, data.remember), user=UserResponse.model_validate(user))
 

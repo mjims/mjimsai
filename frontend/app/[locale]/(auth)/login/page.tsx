@@ -88,10 +88,13 @@ export default function LoginPage() {
               {errors.password && <p className="text-danger text-xs mt-1">{errors.password.message}</p>}
             </div>
 
-            <label className="flex items-center gap-2 text-sm text-surface-600 cursor-pointer">
-              <input {...register("remember")} type="checkbox" className="w-4 h-4 rounded border-surface-300 text-primary-600 focus:ring-primary-400" />
-              {t("remember")}
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 text-sm text-surface-600 cursor-pointer">
+                <input {...register("remember")} type="checkbox" className="w-4 h-4 rounded border-surface-300 text-primary-600 focus:ring-primary-400" />
+                {t("remember")}
+              </label>
+              <Link href="/forgot-password" className="text-sm text-primary-600 hover:text-primary-700 font-medium">{t("forgotPassword")}</Link>
+            </div>
 
             {apiError && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">{apiError}</div>

@@ -1,5 +1,5 @@
 import adminClient from "@/lib/axios";
-import type { AdminCreate, AdminTokenResponse, AdminUser, LLMModel, LLMModelCreate, Plan, PlanCreate, PlatformStats, UserListAdminResponse } from "@/types";
+import type { AdminCreate, AdminTokenResponse, AdminUser, LLMModel, LLMModelCreate, PaymentSetting, PaymentSettingUpdate, Plan, PlanCreate, PlatformStats, SebpayCountry, SebpayCountryCreate, SebpayOperator, SebpayOperatorCreate, UserListAdminResponse } from "@/types";
 
 export const adminService = {
   // Plans CRUD
@@ -50,6 +50,51 @@ export const adminService = {
 
   async deleteModel(id: string): Promise<void> {
     await adminClient.delete(`/api/v1/admin/models/${id}`);
+  },
+
+  // Payment provider settings
+  async getPaymentSettings(): Promise<PaymentSetting[]> {
+    const { data } = await adminClient.get<PaymentSetting[]>("/api/v1/admin/payment-settings");
+    return data;
+  },
+
+  async updatePaymentSetting(provider: string, payload: PaymentSettingUpdate): Promise<PaymentSetting> {
+    const { data } = await adminClient.put<PaymentSetting>(`/api/v1/admin/payment-settings/${provider}`, payload);
+    return data;
+  },
+
+  // Sebpay catalog — countries
+  async listSebpayCountries(): Promise<SebpayCountry[]> {
+    const { data } = await adminClient.get<SebpayCountry[]>("/api/v1/admin/sebpay/countries");
+    return data;
+  },
+  async createSebpayCountry(payload: SebpayCountryCreate): Promise<SebpayCountry> {
+    const { data } = await adminClient.post<SebpayCountry>("/api/v1/admin/sebpay/countries", payload);
+    return data;
+  },
+  async updateSebpayCountry(id: string, payload: Partial<SebpayCountryCreate>): Promise<SebpayCountry> {
+    const { data } = await adminClient.put<SebpayCountry>(`/api/v1/admin/sebpay/countries/${id}`, payload);
+    return data;
+  },
+  async deleteSebpayCountry(id: string): Promise<void> {
+    await adminClient.delete(`/api/v1/admin/sebpay/countries/${id}`);
+  },
+
+  // Sebpay catalog — operators
+  async listSebpayOperators(): Promise<SebpayOperator[]> {
+    const { data } = await adminClient.get<SebpayOperator[]>("/api/v1/admin/sebpay/operators");
+    return data;
+  },
+  async createSebpayOperator(payload: SebpayOperatorCreate): Promise<SebpayOperator> {
+    const { data } = await adminClient.post<SebpayOperator>("/api/v1/admin/sebpay/operators", payload);
+    return data;
+  },
+  async updateSebpayOperator(id: string, payload: Partial<SebpayOperatorCreate>): Promise<SebpayOperator> {
+    const { data } = await adminClient.put<SebpayOperator>(`/api/v1/admin/sebpay/operators/${id}`, payload);
+    return data;
+  },
+  async deleteSebpayOperator(id: string): Promise<void> {
+    await adminClient.delete(`/api/v1/admin/sebpay/operators/${id}`);
   },
 
   // Stats

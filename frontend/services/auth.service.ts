@@ -28,6 +28,16 @@ export const authService = {
     await apiClient.post("/api/v1/auth/resend-otp", { email });
   },
 
+  async forgotPassword(email: string): Promise<void> {
+    await apiClient.post("/api/v1/auth/forgot-password", { email });
+  },
+
+  async resetPassword(email: string, code: string, new_password: string, remember = false): Promise<TokenResponse> {
+    const { data } = await apiClient.post<TokenResponse>("/api/v1/auth/reset-password", { email, code, new_password, remember });
+    persistSession(data);
+    return data;
+  },
+
   async me(): Promise<User> {
     const { data } = await apiClient.get<User>("/api/v1/auth/me");
     return data;

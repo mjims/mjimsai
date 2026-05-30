@@ -1,0 +1,6 @@
+# Test-only dependencies (not installed in the production image).
+# Install in the running api container:
+#   docker compose exec api pip install -r requirements-dev.txt
+#   docker compose exec api pytest -q
+pytest==8.3.3
+pytest-asyncio==0.24.0

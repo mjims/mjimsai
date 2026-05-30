@@ -1,5 +1,6 @@
 """
 Billing routes — plans from DB, per-agent subscriptions (Stripe + Sebpay).
+Payment provider config (keys, base URL, enabled) is admin-managed in the DB.
 """
 
 from __future__ import annotations
@@ -11,8 +12,8 @@ import logging
 import uuid
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -20,6 +21,8 @@ from app.config import get_settings
 from app.database import get_db
 from app.models.agent import Agent
 from app.models.plan import Plan
+from app.models.sebpay_country import SebpayCountry
+from app.models.sebpay_operator import SebpayOperator
 from app.models.user import User
 from app.schemas.billing import (
     AgentSubscriptionResponse,
@@ -30,7 +33,8 @@ from app.schemas.billing import (
     StripeSubscribeRequest,
 )
 from app.schemas.plan import PlanResponse
-from app.services import usage_service
+from app.schemas.sebpay_catalog import SebpayCountryResponse, SebpayOperatorResponse
+from app.services import payment_settings_service, usage_service
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +47,40 @@ async def get_plans(db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Plan).where(Plan.is_active == True).order_by(Plan.sort_order.asc())  # noqa: E712
     )
+    return result.scalars().all()
+
+
+@router.get("/payment-methods")
+async def get_payment_methods(db: AsyncSession = Depends(get_db)):
+    """Which payment methods are enabled (drives the frontend UI)."""
+    return {
+        "stripe": {"enabled": await payment_settings_service.is_enabled(db, "stripe")},
+        "sebpay": {"enabled": await payment_settings_service.is_enabled(db, "sebpay")},
+    }
+
+
+@router.get("/sebpay/countries", response_model=list[SebpayCountryResponse])
+async def list_sebpay_countries(db: AsyncSession = Depends(get_db)):
+    """Active Sebpay countries (no auth)."""
+    result = await db.execute(
+        select(SebpayCountry).where(SebpayCountry.is_active == True)  # noqa: E712
+        .order_by(SebpayCountry.sort_order, SebpayCountry.name)
+    )
+    return result.scalars().all()
+
+
+@router.get("/sebpay/operators", response_model=list[SebpayOperatorResponse])
+async def list_sebpay_operators(
+    country: str | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+):
+    """Active operators available for a country (global ones included)."""
+    query = select(SebpayOperator).where(SebpayOperator.is_active == True)  # noqa: E712
+    if country:
+        query = query.where(
+            or_(SebpayOperator.country_code.is_(None), SebpayOperator.country_code == country.upper())
+        )
+    result = await db.execute(query.order_by(SebpayOperator.sort_order, SebpayOperator.slug))
     return result.scalars().all()
 
 
@@ -94,8 +132,10 @@ async def stripe_subscribe(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a Stripe Checkout session to subscribe an agent to a plan."""
-    settings = get_settings()
-    if not settings.STRIPE_SECRET_KEY:
+    cfg = await payment_settings_service.get_config(db, "stripe")
+    if not cfg.is_enabled:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Stripe payments are disabled")
+    if not cfg.secret_key:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Stripe not configured")
 
     result = await db.execute(select(Agent).where(Agent.id == agent_id, Agent.user_id == user.id))
@@ -110,7 +150,7 @@ async def stripe_subscribe(
 
     try:
         import stripe
-        stripe.api_key = settings.STRIPE_SECRET_KEY
+        stripe.api_key = cfg.secret_key
 
         # Stripe Price IDs should be configured per plan/period in your Stripe dashboard
         price_id = f"price_{plan.name}_{data.billing_period}"  # convention — configure in Stripe
@@ -138,8 +178,8 @@ async def stripe_subscribe(
 @router.post("/webhook/stripe")
 async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     """Handle Stripe webhook — update agent plan on successful subscription."""
-    settings = get_settings()
-    if not settings.STRIPE_SECRET_KEY:
+    cfg = await payment_settings_service.get_config(db, "stripe")
+    if not cfg.secret_key or not cfg.webhook_secret:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Stripe not configured")
 
     payload = await request.body()
@@ -147,8 +187,8 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
 
     try:
         import stripe
-        stripe.api_key = settings.STRIPE_SECRET_KEY
-        event = stripe.Webhook.construct_event(payload, sig_header, settings.STRIPE_WEBHOOK_SECRET)
+        stripe.api_key = cfg.secret_key
+        event = stripe.Webhook.construct_event(payload, sig_header, cfg.webhook_secret)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -183,8 +223,10 @@ async def sebpay_subscribe(
     db: AsyncSession = Depends(get_db),
 ):
     """Initiate Mobile Money payment via Sebpay to subscribe an agent to a plan."""
-    settings = get_settings()
-    if not settings.SEBPAY_PUBLIC_KEY or not settings.SEBPAY_SECRET_KEY:
+    cfg = await payment_settings_service.get_config(db, "sebpay")
+    if not cfg.is_enabled:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Sebpay payments are disabled")
+    if not cfg.public_key or not cfg.secret_key:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Sebpay not configured")
 
     result = await db.execute(select(Agent).where(Agent.id == agent_id, Agent.user_id == user.id))
@@ -207,6 +249,7 @@ async def sebpay_subscribe(
     if amount_xof is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No XOF price defined for this plan/period")
 
+    settings = get_settings()
     reference = f"MJIMSAI-{agent.id}-{uuid.uuid4().hex[:8].upper()}"
     callback_url = data.callback_url or f"{settings.cors_origins_list[0]}/api/v1/billing/webhook/sebpay"
 
@@ -216,10 +259,10 @@ async def sebpay_subscribe(
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                f"{settings.sebpay_base_url}/collections",
+                f"{cfg.base_url}/collections",
                 headers={
-                    "X-Public-Key": settings.SEBPAY_PUBLIC_KEY,
-                    "X-Secret-Key": settings.SEBPAY_SECRET_KEY,
+                    "X-Public-Key": cfg.public_key,
+                    "X-Secret-Key": cfg.secret_key,
                     "Content-Type": "application/json",
                 },
                 json={
@@ -251,18 +294,18 @@ async def sebpay_subscribe(
 @router.post("/webhook/sebpay")
 async def sebpay_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     """Handle Sebpay payment callbacks — activate agent plan on approval."""
-    settings = get_settings()
+    cfg = await payment_settings_service.get_config(db, "sebpay")
 
     raw_body = await request.body()
 
     # Fail closed: reject if secret missing or signature header absent
-    if not settings.SEBPAY_SECRET_KEY:
+    if not cfg.secret_key:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Sebpay webhook not configured")
     sig_header = request.headers.get("X-SebPay-Signature", "")
     if not sig_header:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing X-SebPay-Signature header")
 
-    expected = hmac.new(settings.SEBPAY_SECRET_KEY.encode(), raw_body, hashlib.sha256).hexdigest()
+    expected = hmac.new(cfg.secret_key.encode(), raw_body, hashlib.sha256).hexdigest()
     if not hmac.compare_digest(expected, sig_header):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid signature")
 
@@ -314,17 +357,17 @@ async def get_payment_status(
     if not agent_result.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment not found")
 
-    settings = get_settings()
-    if not settings.SEBPAY_PUBLIC_KEY:
+    cfg = await payment_settings_service.get_config(db, "sebpay")
+    if not cfg.public_key or not cfg.secret_key:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Sebpay not configured")
 
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                f"{settings.sebpay_base_url}/collections/{reference}",
+                f"{cfg.base_url}/collections/{reference}",
                 headers={
-                    "X-Public-Key": settings.SEBPAY_PUBLIC_KEY,
-                    "X-Secret-Key": settings.SEBPAY_SECRET_KEY,
+                    "X-Public-Key": cfg.public_key,
+                    "X-Secret-Key": cfg.secret_key,
                 },
                 timeout=15.0,
             )

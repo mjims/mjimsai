@@ -57,7 +57,8 @@
       "register": "Create an account",
       "error": "Invalid email or password",
       "remember": "Remember me",
-      "emailNotVerified": "Email not verified. Enter the code you received."
+      "emailNotVerified": "Email not verified. Enter the code you received.",
+      "forgotPassword": "Forgot password?"
     },
     "register": {
       "title": "Create your account",
@@ -77,6 +78,22 @@
       "submit": "Verify",
       "resend": "Resend code",
       "sent": "Code resent.",
+      "error": "Invalid or expired code"
+    },
+    "forgot": {
+      "title": "Forgot password",
+      "subtitle": "Enter your email and we'll send you a reset code.",
+      "email": "Email",
+      "submit": "Send code",
+      "sent": "If this account exists, a code has been sent.",
+      "back": "← Back to sign in"
+    },
+    "reset": {
+      "title": "Reset password",
+      "subtitle": "Code sent to",
+      "code": "Verification code",
+      "newPassword": "New password",
+      "submit": "Reset",
       "error": "Invalid or expired code"
     }
   },

@@ -63,6 +63,7 @@ _OTP_PURPOSE_LABEL = {
     "email_verification": "vérifier votre adresse email",
     "login_2fa": "valider votre connexion",
     "email_change": "confirmer votre nouvelle adresse email",
+    "password_reset": "réinitialiser votre mot de passe",
 }
 
 

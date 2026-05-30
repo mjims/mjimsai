@@ -20,7 +20,10 @@ from app.database import get_db
 from app.models.admin_user import AdminUser
 from app.models.agent import Agent
 from app.models.llm_model import LLMModel
+from app.models.payment_setting import PaymentSetting
 from app.models.plan import Plan
+from app.models.sebpay_country import SebpayCountry
+from app.models.sebpay_operator import SebpayOperator
 from app.models.usage import UsageRecord
 from app.models.user import User
 from app.schemas.admin import (
@@ -31,8 +34,19 @@ from app.schemas.admin import (
 )
 from app.schemas.admin_auth import AdminCreateRequest, AdminResponse, AdminSetActiveRequest
 from app.schemas.llm_model import LLMModelCreate, LLMModelResponse, LLMModelUpdate
+from app.schemas.payment_setting import PaymentSettingResponse, PaymentSettingUpdate
 from app.schemas.plan import PlanCreate, PlanResponse, PlanUpdate
+from app.schemas.sebpay_catalog import (
+    SebpayCountryCreate,
+    SebpayCountryResponse,
+    SebpayCountryUpdate,
+    SebpayOperatorCreate,
+    SebpayOperatorResponse,
+    SebpayOperatorUpdate,
+)
+from app.services import payment_settings_service
 from app.services.email_service import send_admin_invite_email
+from app.services.encryption import encrypt_api_key, mask_api_key
 from app.services.llm.factory import get_supported_providers
 from app.services.usage_service import _current_year_month
 
@@ -393,6 +407,196 @@ async def delete_admin(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot delete the last active admin")
 
     await db.delete(admin)
+    await db.commit()
+
+
+# ─── Payment provider settings ────────────────────────────────────────────────
+
+_PAYMENT_PROVIDERS = ("stripe", "sebpay")
+
+
+async def _payment_response(db: AsyncSession, provider: str) -> PaymentSettingResponse:
+    cfg = await payment_settings_service.get_config(db, provider)
+    return PaymentSettingResponse(
+        provider=provider,
+        is_enabled=cfg.is_enabled,
+        base_url=cfg.base_url,
+        environment=cfg.environment,
+        secret_key_masked=mask_api_key(cfg.secret_key) if cfg.secret_key else None,
+        public_key_masked=mask_api_key(cfg.public_key) if cfg.public_key else None,
+        webhook_secret_masked=mask_api_key(cfg.webhook_secret) if cfg.webhook_secret else None,
+        secret_key_set=bool(cfg.secret_key),
+        public_key_set=bool(cfg.public_key),
+        webhook_secret_set=bool(cfg.webhook_secret),
+    )
+
+
+@router.get("/payment-settings", response_model=list[PaymentSettingResponse])
+async def list_payment_settings(
+    _: AdminUser = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    return [await _payment_response(db, p) for p in _PAYMENT_PROVIDERS]
+
+
+@router.put("/payment-settings/{provider}", response_model=PaymentSettingResponse)
+async def update_payment_setting(
+    provider: str,
+    data: PaymentSettingUpdate,
+    _: AdminUser = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    if provider not in _PAYMENT_PROVIDERS:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unknown provider")
+
+    row = (await db.execute(
+        select(PaymentSetting).where(PaymentSetting.provider == provider)
+    )).scalar_one_or_none()
+    if not row:
+        row = PaymentSetting(provider=provider, is_enabled=False)
+        db.add(row)
+
+    if data.is_enabled is not None:
+        row.is_enabled = data.is_enabled
+    if data.base_url is not None:
+        row.base_url = data.base_url or None
+    if data.environment is not None:
+        row.environment = data.environment or None
+
+    # Write-only secrets: non-empty value → encrypt & replace
+    if data.secret_key:
+        row.secret_key_enc = encrypt_api_key(data.secret_key)
+    if data.public_key:
+        row.public_key_enc = encrypt_api_key(data.public_key)
+    if data.webhook_secret:
+        row.webhook_secret_enc = encrypt_api_key(data.webhook_secret)
+
+    await db.commit()
+    return await _payment_response(db, provider)
+
+
+# ─── Sebpay catalog: countries ────────────────────────────────────────────────
+
+@router.get("/sebpay/countries", response_model=list[SebpayCountryResponse])
+async def list_sebpay_countries(
+    _: AdminUser = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(SebpayCountry).order_by(SebpayCountry.sort_order, SebpayCountry.code))
+    return result.scalars().all()
+
+
+@router.post("/sebpay/countries", response_model=SebpayCountryResponse, status_code=status.HTTP_201_CREATED)
+async def create_sebpay_country(
+    data: SebpayCountryCreate,
+    _: AdminUser = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    data.code = data.code.upper()
+    exists = (await db.execute(select(SebpayCountry).where(SebpayCountry.code == data.code))).scalar_one_or_none()
+    if exists:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"Country '{data.code}' already exists")
+    country = SebpayCountry(**data.model_dump())
+    db.add(country)
+    await db.commit()
+    await db.refresh(country)
+    return country
+
+
+@router.put("/sebpay/countries/{country_id}", response_model=SebpayCountryResponse)
+async def update_sebpay_country(
+    country_id: uuid.UUID,
+    data: SebpayCountryUpdate,
+    _: AdminUser = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    country = (await db.execute(select(SebpayCountry).where(SebpayCountry.id == country_id))).scalar_one_or_none()
+    if not country:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Country not found")
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(country, field, value)
+    await db.commit()
+    await db.refresh(country)
+    return country
+
+
+@router.delete("/sebpay/countries/{country_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_sebpay_country(
+    country_id: uuid.UUID,
+    _: AdminUser = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    country = (await db.execute(select(SebpayCountry).where(SebpayCountry.id == country_id))).scalar_one_or_none()
+    if not country:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Country not found")
+    await db.delete(country)
+    await db.commit()
+
+
+# ─── Sebpay catalog: operators ────────────────────────────────────────────────
+
+@router.get("/sebpay/operators", response_model=list[SebpayOperatorResponse])
+async def list_sebpay_operators(
+    _: AdminUser = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(SebpayOperator).order_by(SebpayOperator.country_code, SebpayOperator.sort_order))
+    return result.scalars().all()
+
+
+@router.post("/sebpay/operators", response_model=SebpayOperatorResponse, status_code=status.HTTP_201_CREATED)
+async def create_sebpay_operator(
+    data: SebpayOperatorCreate,
+    _: AdminUser = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    payload = data.model_dump()
+    payload["country_code"] = (payload["country_code"] or None) and payload["country_code"].upper()
+    exists = (await db.execute(
+        select(SebpayOperator).where(
+            SebpayOperator.country_code == payload["country_code"],
+            SebpayOperator.slug == payload["slug"],
+        )
+    )).scalar_one_or_none()
+    if exists:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Operator already exists for this country")
+    operator = SebpayOperator(**payload)
+    db.add(operator)
+    await db.commit()
+    await db.refresh(operator)
+    return operator
+
+
+@router.put("/sebpay/operators/{operator_id}", response_model=SebpayOperatorResponse)
+async def update_sebpay_operator(
+    operator_id: uuid.UUID,
+    data: SebpayOperatorUpdate,
+    _: AdminUser = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    operator = (await db.execute(select(SebpayOperator).where(SebpayOperator.id == operator_id))).scalar_one_or_none()
+    if not operator:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Operator not found")
+    values = data.model_dump(exclude_unset=True)
+    if "country_code" in values:
+        values["country_code"] = (values["country_code"] or None) and values["country_code"].upper()
+    for field, value in values.items():
+        setattr(operator, field, value)
+    await db.commit()
+    await db.refresh(operator)
+    return operator
+
+
+@router.delete("/sebpay/operators/{operator_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_sebpay_operator(
+    operator_id: uuid.UUID,
+    _: AdminUser = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    operator = (await db.execute(select(SebpayOperator).where(SebpayOperator.id == operator_id))).scalar_one_or_none()
+    if not operator:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Operator not found")
+    await db.delete(operator)
     await db.commit()
 
 

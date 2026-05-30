@@ -31,6 +31,65 @@ export interface PlanCreate {
   sort_order: number;
 }
 
+// --- Payments ---
+export interface PaymentSetting {
+  provider: string;
+  is_enabled: boolean;
+  base_url: string | null;
+  environment: string | null;
+  secret_key_masked: string | null;
+  public_key_masked: string | null;
+  webhook_secret_masked: string | null;
+  secret_key_set: boolean;
+  public_key_set: boolean;
+  webhook_secret_set: boolean;
+}
+
+export interface PaymentSettingUpdate {
+  is_enabled?: boolean;
+  base_url?: string | null;
+  environment?: string | null;
+  secret_key?: string;
+  public_key?: string;
+  webhook_secret?: string;
+}
+
+export interface SebpayCountry {
+  id: string;
+  code: string;
+  name: string;
+  prefix: string;
+  currency: string;
+  is_active: boolean;
+  sort_order: number;
+}
+
+export interface SebpayCountryCreate {
+  code: string;
+  name: string;
+  prefix: string;
+  currency: string;
+  is_active: boolean;
+  sort_order: number;
+}
+
+export interface SebpayOperator {
+  id: string;
+  slug: string;
+  label: string;
+  country_code: string | null;
+  is_active: boolean;
+  sort_order: number;
+}
+
+export interface SebpayOperatorCreate {
+  slug: string;
+  label: string;
+  country_code?: string | null;
+  is_active: boolean;
+  sort_order: number;
+}
+
 export interface LLMModel {
   id: string;
   provider: string;
