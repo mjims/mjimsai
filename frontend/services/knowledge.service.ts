@@ -3,8 +3,8 @@ import type { KnowledgeDocument } from "@/types";
 
 export const knowledgeService = {
   async list(agentId: string): Promise<KnowledgeDocument[]> {
-    const { data } = await apiClient.get<KnowledgeDocument[]>(`/api/v1/agents/${agentId}/knowledge`);
-    return data;
+    const { data } = await apiClient.get<{ documents: KnowledgeDocument[] }>(`/api/v1/agents/${agentId}/knowledge`);
+    return data.documents ?? [];
   },
 
   async upload(agentId: string, file: File): Promise<KnowledgeDocument> {
