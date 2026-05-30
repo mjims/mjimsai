@@ -1,18 +1,23 @@
 """
-Admin backoffice routes — plan CRUD and user management.
-Auth: X-Admin-API-Key header.
+Admin backoffice routes — plans, models, users, and admin management.
+Auth: backoffice admin JWT (Authorization: Bearer ...).
 """
 
 from __future__ import annotations
 
+import secrets
 import uuid
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import validate_admin_key
+from app.api.deps import get_current_admin
+from app.config import get_settings
+from app.core import hash_password
 from app.database import get_db
+from app.models.admin_user import AdminUser
 from app.models.agent import Agent
 from app.models.llm_model import LLMModel
 from app.models.plan import Plan
@@ -24,8 +29,10 @@ from app.schemas.admin import (
     UserAdminResponse,
     UserListAdminResponse,
 )
+from app.schemas.admin_auth import AdminCreateRequest, AdminResponse, AdminSetActiveRequest
 from app.schemas.llm_model import LLMModelCreate, LLMModelResponse, LLMModelUpdate
 from app.schemas.plan import PlanCreate, PlanResponse, PlanUpdate
+from app.services.email_service import send_admin_invite_email
 from app.services.llm.factory import get_supported_providers
 from app.services.usage_service import _current_year_month
 
@@ -36,7 +43,7 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 
 @router.get("/plans", response_model=list[PlanResponse])
 async def list_plans(
-    _: bool = Depends(validate_admin_key),
+    _: AdminUser = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """List all plans (active and inactive)."""
@@ -47,7 +54,7 @@ async def list_plans(
 @router.post("/plans", response_model=PlanResponse, status_code=status.HTTP_201_CREATED)
 async def create_plan(
     data: PlanCreate,
-    _: bool = Depends(validate_admin_key),
+    _: AdminUser = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db),
 ):
     existing = await db.execute(select(Plan).where(Plan.name == data.name))
@@ -64,7 +71,7 @@ async def create_plan(
 @router.get("/plans/{plan_id}", response_model=PlanResponse)
 async def get_plan(
     plan_id: uuid.UUID,
-    _: bool = Depends(validate_admin_key),
+    _: AdminUser = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(select(Plan).where(Plan.id == plan_id))
@@ -78,7 +85,7 @@ async def get_plan(
 async def update_plan(
     plan_id: uuid.UUID,
     data: PlanUpdate,
-    _: bool = Depends(validate_admin_key),
+    _: AdminUser = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(select(Plan).where(Plan.id == plan_id))
@@ -97,7 +104,7 @@ async def update_plan(
 @router.delete("/plans/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_plan(
     plan_id: uuid.UUID,
-    _: bool = Depends(validate_admin_key),
+    _: AdminUser = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(select(Plan).where(Plan.id == plan_id))
@@ -123,7 +130,7 @@ async def delete_plan(
 
 @router.get("/providers", response_model=list[str])
 async def list_supported_providers(
-    _: bool = Depends(validate_admin_key),
+    _: AdminUser = Depends(get_current_admin),
 ):
     """Code-backed provider slugs that models can be attached to."""
     return get_supported_providers()
@@ -131,7 +138,7 @@ async def list_supported_providers(
 
 @router.get("/models", response_model=list[LLMModelResponse])
 async def list_models(
-    _: bool = Depends(validate_admin_key),
+    _: AdminUser = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """List all models (active and inactive), grouped-friendly order."""
@@ -144,7 +151,7 @@ async def list_models(
 @router.post("/models", response_model=LLMModelResponse, status_code=status.HTTP_201_CREATED)
 async def create_model(
     data: LLMModelCreate,
-    _: bool = Depends(validate_admin_key),
+    _: AdminUser = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db),
 ):
     if data.provider not in get_supported_providers():
@@ -174,7 +181,7 @@ async def create_model(
 async def update_model(
     model_id: uuid.UUID,
     data: LLMModelUpdate,
-    _: bool = Depends(validate_admin_key),
+    _: AdminUser = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(select(LLMModel).where(LLMModel.id == model_id))
@@ -193,7 +200,7 @@ async def update_model(
 @router.delete("/models/{model_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_model(
     model_id: uuid.UUID,
-    _: bool = Depends(validate_admin_key),
+    _: AdminUser = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(select(LLMModel).where(LLMModel.id == model_id))
@@ -208,7 +215,7 @@ async def delete_model(
 
 @router.get("/stats", response_model=PlatformStatsResponse)
 async def get_stats(
-    _: bool = Depends(validate_admin_key),
+    _: AdminUser = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db),
 ):
     total_users = (await db.execute(select(func.count()).select_from(User))).scalar() or 0
@@ -249,7 +256,7 @@ async def get_stats(
 async def list_users(
     skip: int = 0,
     limit: int = 50,
-    _: bool = Depends(validate_admin_key),
+    _: AdminUser = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db),
 ):
     total = (await db.execute(select(func.count()).select_from(User))).scalar() or 0
@@ -264,8 +271,9 @@ async def list_users(
             select(func.count()).select_from(Agent).where(Agent.user_id == user.id)
         )).scalar() or 0
         user_responses.append(UserAdminResponse(
-            id=user.id, email=user.email, username=user.username,
-            full_name=user.full_name, api_key=user.api_key,
+            id=user.id, email=user.email,
+            first_name=user.first_name, last_name=user.last_name,
+            api_key=user.api_key, email_verified=user.email_verified,
             is_active=user.is_active, is_suspended=user.is_suspended,
             created_at=user.created_at, agent_count=agent_count,
         ))
@@ -277,7 +285,7 @@ async def list_users(
 async def suspend_user(
     user_id: uuid.UUID,
     data: SuspendRequest,
-    _: bool = Depends(validate_admin_key),
+    _: AdminUser = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(select(User).where(User.id == user_id))
@@ -294,16 +302,103 @@ async def suspend_user(
     )).scalar() or 0
 
     return UserAdminResponse(
-        id=user.id, email=user.email, username=user.username,
-        full_name=user.full_name, api_key=user.api_key,
+        id=user.id, email=user.email,
+        first_name=user.first_name, last_name=user.last_name,
+        api_key=user.api_key, email_verified=user.email_verified,
         is_active=user.is_active, is_suspended=user.is_suspended,
         created_at=user.created_at, agent_count=agent_count,
     )
 
 
+# ─── Admin management (admins can invite other admins) ────────────────────────
+
+@router.get("/admins", response_model=list[AdminResponse])
+async def list_admins(
+    _: AdminUser = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(AdminUser).order_by(AdminUser.created_at.asc()))
+    return result.scalars().all()
+
+
+@router.post("/admins", response_model=AdminResponse, status_code=status.HTTP_201_CREATED)
+async def create_admin(
+    data: AdminCreateRequest,
+    current: AdminUser = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create an admin (no password) and email them a set-password invite."""
+    settings = get_settings()
+    exists = (await db.execute(select(AdminUser).where(AdminUser.email == data.email))).scalar_one_or_none()
+    if exists:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Admin email already exists")
+
+    secret = secrets.token_urlsafe(32)
+    admin = AdminUser(
+        email=data.email,
+        first_name=data.first_name,
+        last_name=data.last_name,
+        password_hash=None,
+        is_active=True,
+        invite_token_hash=hash_password(secret),
+        invite_expires_at=datetime.now(timezone.utc) + timedelta(hours=settings.INVITE_TTL_HOURS),
+    )
+    db.add(admin)
+    await db.commit()
+    await db.refresh(admin)
+
+    link = f"{settings.BACKOFFICE_URL}/accept-invite?token={admin.id}.{secret}"
+    inviter = f"{current.first_name} {current.last_name}".strip() or current.email
+    await send_admin_invite_email(admin.email, link, inviter)
+
+    return admin
+
+
+@router.patch("/admins/{admin_id}", response_model=AdminResponse)
+async def set_admin_active(
+    admin_id: uuid.UUID,
+    data: AdminSetActiveRequest,
+    current: AdminUser = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    if admin_id == current.id and not data.is_active:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You cannot deactivate yourself")
+    result = await db.execute(select(AdminUser).where(AdminUser.id == admin_id))
+    admin = result.scalar_one_or_none()
+    if not admin:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Admin not found")
+    admin.is_active = data.is_active
+    await db.commit()
+    await db.refresh(admin)
+    return admin
+
+
+@router.delete("/admins/{admin_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_admin(
+    admin_id: uuid.UUID,
+    current: AdminUser = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    if admin_id == current.id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You cannot delete yourself")
+    result = await db.execute(select(AdminUser).where(AdminUser.id == admin_id))
+    admin = result.scalar_one_or_none()
+    if not admin:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Admin not found")
+
+    active_count = (await db.execute(
+        select(func.count()).select_from(AdminUser).where(AdminUser.is_active.is_(True))
+    )).scalar() or 0
+    if admin.is_active and active_count <= 1:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot delete the last active admin")
+
+    await db.delete(admin)
+    await db.commit()
+
+
 @router.get("/health")
 async def admin_health(
-    _: bool = Depends(validate_admin_key),
+    _: AdminUser = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db),
 ):
     try:

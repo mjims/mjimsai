@@ -53,13 +53,37 @@ export interface LLMModelCreate {
 export interface UserAdminResponse {
   id: string;
   email: string;
-  username: string;
-  full_name: string | null;
+  first_name: string;
+  last_name: string;
   api_key: string;
+  email_verified: boolean;
   is_active: boolean;
   is_suspended: boolean;
   created_at: string;
   agent_count: number;
+}
+
+// --- Admin accounts & auth ---
+export interface AdminUser {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  is_active: boolean;
+  last_login_at: string | null;
+  created_at: string;
+}
+
+export interface AdminCreate {
+  first_name: string;
+  last_name: string;
+  email: string;
+}
+
+export interface AdminTokenResponse {
+  access_token: string;
+  token_type: string;
+  admin: AdminUser;
 }
 
 export interface UserListAdminResponse {

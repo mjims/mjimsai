@@ -8,12 +8,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { authService } from "@/services/auth.service";
-import { useAuth } from "@/context/AuthContext";
 import { getApiError } from "@/lib/axios";
 
 const schema = z.object({
+  first_name: z.string().min(1, "Requis").max(100),
+  last_name: z.string().min(1, "Requis").max(100),
   email: z.string().email("Email invalide"),
-  username: z.string().min(3, "Min 3 caractères").max(100),
   password: z.string().min(8, "Min 8 caractères"),
 });
 type FormData = z.infer<typeof schema>;
@@ -21,7 +21,6 @@ type FormData = z.infer<typeof schema>;
 export default function RegisterPage() {
   const t = useTranslations("auth.register");
   const router = useRouter();
-  const { setUser, setToken } = useAuth();
   const [apiError, setApiError] = useState("");
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
@@ -31,18 +30,17 @@ export default function RegisterPage() {
   async function onSubmit(values: FormData) {
     setApiError("");
     try {
-      const res = await authService.register(values);
-      setToken(res.access_token);
-      setUser(res.user);
-      router.push("/dashboard");
+      await authService.register(values);
+      router.push(`/verify-email?email=${encodeURIComponent(values.email)}`);
     } catch (err) {
       setApiError(getApiError(err));
     }
   }
 
   const fields = [
+    { name: "first_name" as const, label: t("firstName"), type: "text", placeholder: "Jean", autoComplete: "given-name" },
+    { name: "last_name" as const, label: t("lastName"), type: "text", placeholder: "Dupont", autoComplete: "family-name" },
     { name: "email" as const, label: t("email"), type: "email", placeholder: "vous@exemple.com", autoComplete: "email" },
-    { name: "username" as const, label: t("username"), type: "text", placeholder: "votre_pseudo", autoComplete: "username" },
     { name: "password" as const, label: t("password"), type: "password", placeholder: "••••••••", autoComplete: "new-password" },
   ];
 

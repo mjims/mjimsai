@@ -3,6 +3,8 @@ SQLAlchemy models — all models imported here for Alembic auto-detection.
 """
 
 from app.models.user import User  # noqa: F401
+from app.models.admin_user import AdminUser  # noqa: F401
+from app.models.otp_code import OtpCode  # noqa: F401
 from app.models.plan import Plan  # noqa: F401
 from app.models.llm_model import LLMModel  # noqa: F401
 from app.models.agent import Agent  # noqa: F401

@@ -48,7 +48,7 @@ export default function UsersPage() {
             {users.map((user) => (
               <tr key={user.id} className="hover:bg-surface-50">
                 <td className="px-5 py-4">
-                  <p className="text-sm font-medium text-surface-900">{user.username}</p>
+                  <p className="text-sm font-medium text-surface-900">{[user.first_name, user.last_name].filter(Boolean).join(" ") || "—"}</p>
                   <p className="text-xs text-surface-400">{user.email}</p>
                 </td>
                 <td className="px-5 py-4 text-sm text-surface-600">{user.agent_count}</td>

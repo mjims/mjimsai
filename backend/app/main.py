@@ -63,6 +63,7 @@ def create_app() -> FastAPI:
     from app.api.v1.conversations import router as conversations_router
     from app.api.v1.knowledge import router as knowledge_router
     from app.api.v1.admin import router as admin_router
+    from app.api.v1.admin_auth import router as admin_auth_router
     from app.api.v1.billing import router as billing_router
 
     app.include_router(auth_router, prefix="/api/v1")
@@ -70,6 +71,7 @@ def create_app() -> FastAPI:
     app.include_router(chat_router, prefix="/api/v1")
     app.include_router(conversations_router, prefix="/api/v1")
     app.include_router(knowledge_router, prefix="/api/v1")
+    app.include_router(admin_auth_router, prefix="/api/v1")
     app.include_router(admin_router, prefix="/api/v1")
     app.include_router(billing_router, prefix="/api/v1")
 

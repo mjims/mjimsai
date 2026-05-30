@@ -2,9 +2,10 @@
 export interface User {
   id: string;
   email: string;
-  username: string;
-  full_name: string | null;
+  first_name: string;
+  last_name: string;
   api_key: string;        // widget auth key
+  email_verified: boolean;
   is_active: boolean;
   is_suspended: boolean;
   created_at: string;
@@ -14,6 +15,11 @@ export interface TokenResponse {
   access_token: string;
   token_type: string;
   user: User;
+}
+
+export interface RegisterResponse {
+  verification_required: boolean;
+  email: string;
 }
 
 // --- Plan ---

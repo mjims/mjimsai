@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import axios from "axios";
 import { authService } from "@/services/auth.service";
 import { useAuth } from "@/context/AuthContext";
 import { getApiError } from "@/lib/axios";
@@ -14,6 +15,7 @@ import { getApiError } from "@/lib/axios";
 const schema = z.object({
   email: z.string().email("Email invalide"),
   password: z.string().min(1, "Mot de passe requis"),
+  remember: z.boolean().optional(),
 });
 type FormData = z.infer<typeof schema>;
 
@@ -30,11 +32,17 @@ export default function LoginPage() {
   async function onSubmit(values: FormData) {
     setApiError("");
     try {
-      const res = await authService.login(values.email, values.password);
+      const res = await authService.login(values.email, values.password, !!values.remember);
       setToken(res.access_token);
       setUser(res.user);
       router.push("/dashboard");
     } catch (err) {
+      // Email not verified → route to the OTP screen
+      if (axios.isAxiosError(err) && err.response?.status === 403 && err.response?.data?.detail === "email_not_verified") {
+        await authService.resendOtp(values.email).catch(() => {});
+        router.push(`/verify-email?email=${encodeURIComponent(values.email)}`);
+        return;
+      }
       setApiError(getApiError(err));
     }
   }
@@ -79,6 +87,11 @@ export default function LoginPage() {
                 placeholder="••••••••" />
               {errors.password && <p className="text-danger text-xs mt-1">{errors.password.message}</p>}
             </div>
+
+            <label className="flex items-center gap-2 text-sm text-surface-600 cursor-pointer">
+              <input {...register("remember")} type="checkbox" className="w-4 h-4 rounded border-surface-300 text-primary-600 focus:ring-primary-400" />
+              {t("remember")}
+            </label>
 
             {apiError && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">{apiError}</div>

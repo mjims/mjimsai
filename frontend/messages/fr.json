@@ -55,17 +55,29 @@
       "submit": "Se connecter",
       "noAccount": "Pas encore de compte ?",
       "register": "Créer un compte",
-      "error": "Email ou mot de passe incorrect"
+      "error": "Email ou mot de passe incorrect",
+      "remember": "Se souvenir de moi",
+      "emailNotVerified": "Email non vérifié. Saisissez le code reçu."
     },
     "register": {
       "title": "Créer votre compte",
       "subtitle": "Rejoignez MjimsAI et créez vos premiers agents IA",
       "email": "Email",
-      "username": "Nom d'utilisateur",
       "password": "Mot de passe",
       "submit": "Créer mon compte",
       "hasAccount": "Déjà un compte ?",
-      "login": "Se connecter"
+      "login": "Se connecter",
+      "firstName": "Prénom",
+      "lastName": "Nom"
+    },
+    "verify": {
+      "title": "Vérifiez votre email",
+      "subtitle": "Saisissez le code à 6 chiffres envoyé à",
+      "code": "Code de vérification",
+      "submit": "Valider",
+      "resend": "Renvoyer le code",
+      "sent": "Code renvoyé.",
+      "error": "Code invalide ou expiré"
     }
   },
   "dashboard": {

@@ -11,9 +11,9 @@ from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import get_settings
 from app.core import decode_access_token
 from app.database import get_db
+from app.models.admin_user import AdminUser
 from app.models.agent import Agent
 from app.models.user import User
 
@@ -43,15 +43,25 @@ async def get_current_user(
     return user
 
 
-async def validate_admin_key(
-    x_admin_api_key: str = Header(..., alias="X-Admin-API-Key"),
-) -> bool:
-    settings = get_settings()
-    if not settings.ADMIN_API_KEY:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="ADMIN_API_KEY not configured")
-    if x_admin_api_key != settings.ADMIN_API_KEY:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid admin API key")
-    return True
+async def get_current_admin(
+    authorization: str = Header(..., alias="Authorization"),
+    db: AsyncSession = Depends(get_db),
+) -> AdminUser:
+    """Validate a backoffice admin JWT (typ='admin') and return the AdminUser."""
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authorization header")
+    payload = decode_access_token(authorization[7:])
+    if payload is None or payload.get("typ") != "admin":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
+    admin_id = payload.get("sub")
+    if not admin_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
+
+    result = await db.execute(select(AdminUser).where(AdminUser.id == uuid.UUID(admin_id)))
+    admin = result.scalar_one_or_none()
+    if not admin or not admin.is_active:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Admin not found or inactive")
+    return admin
 
 
 async def validate_widget_key(

@@ -41,8 +41,29 @@ class Settings(BaseSettings):
     JWT_SECRET: str = "CHANGE-ME-IN-PRODUCTION-min-32-chars"
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRATION_HOURS: int = 24
+    JWT_REMEMBER_DAYS: int = 7  # "remember me" session length
     API_KEYS: str = ""  # Comma-separated widget API keys
-    ADMIN_API_KEY: str = ""  # Backoffice → API key
+
+    # --- Email / OTP ---
+    SMTP_HOST: Optional[str] = None
+    SMTP_PORT: int = 587
+    SMTP_USER: Optional[str] = None
+    SMTP_PASSWORD: Optional[str] = None
+    SMTP_FROM: str = "MjimsAI <no-reply@mjimsai.com>"
+    SMTP_STARTTLS: bool = True
+    OTP_TTL_MINUTES: int = 10
+    OTP_MAX_ATTEMPTS: int = 5
+    INVITE_TTL_HOURS: int = 48
+
+    # Public URLs (for links inside emails)
+    FRONTEND_URL: str = "http://localhost:3000"
+    BACKOFFICE_URL: str = "http://localhost:3001"
+
+    # --- Bootstrap admin (first backoffice admin, created by seed) ---
+    ADMIN_EMAIL: Optional[str] = None
+    ADMIN_PASSWORD: Optional[str] = None
+    ADMIN_FIRST_NAME: str = "Admin"
+    ADMIN_LAST_NAME: str = "MjimsAI"
 
     # --- LLM Providers (platform-level fallback keys) ---
     ANTHROPIC_API_KEY: Optional[str] = None

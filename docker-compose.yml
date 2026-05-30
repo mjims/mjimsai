@@ -42,7 +42,22 @@ services:
       # Auth
       JWT_SECRET: ${JWT_SECRET}
       API_KEYS: ${API_KEYS:-}
-      ADMIN_API_KEY: ${ADMIN_API_KEY}
+
+      # Bootstrap admin (first backoffice admin, created by seed)
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_FIRST_NAME: ${ADMIN_FIRST_NAME:-Admin}
+      ADMIN_LAST_NAME: ${ADMIN_LAST_NAME:-MjimsAI}
+
+      # Email / OTP (SMTP)
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-MjimsAI <no-reply@mjimsai.com>}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
+      FRONTEND_URL: ${NEXT_PUBLIC_FRONTEND_URL:-http://localhost:3000}
+      BACKOFFICE_URL: ${NEXT_PUBLIC_BACKOFFICE_URL:-http://localhost:3001}
 
       # Encryption (for per-agent API keys)
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
@@ -98,7 +113,6 @@ services:
       - api
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
-      NEXT_PUBLIC_ADMIN_API_KEY: ${ADMIN_API_KEY}
       INTERNAL_API_URL: http://api:8080
       NODE_ENV: production
     ports:

@@ -6,20 +6,22 @@ const adminClient = axios.create({
   timeout: 30000,
 });
 
-// Attach admin API key from localStorage
+// Attach admin JWT from localStorage
 adminClient.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
-    const key = localStorage.getItem("mjimsai_admin_token");
-    if (key) config.headers["X-Admin-API-Key"] = key;
+    const token = localStorage.getItem("mjimsai_admin_token");
+    if (token) config.headers["Authorization"] = `Bearer ${token}`;
   }
   return config;
 });
 
-// On 401: redirect to login
+// On 401: redirect to login (skip auth endpoints so login errors show inline)
 adminClient.interceptors.response.use(
   (res) => res,
   (err: AxiosError) => {
-    if (err.response?.status === 401 && typeof window !== "undefined") {
+    const url = err.config?.url || "";
+    const isAuthCall = url.includes("/admin/auth/");
+    if (err.response?.status === 401 && !isAuthCall && typeof window !== "undefined") {
       localStorage.removeItem("mjimsai_admin_token");
       window.location.href = "/login";
     }

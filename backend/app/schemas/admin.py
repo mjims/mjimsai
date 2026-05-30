@@ -12,9 +12,10 @@ from pydantic import BaseModel
 class UserAdminResponse(BaseModel):
     id: uuid.UUID
     email: str
-    username: str
-    full_name: Optional[str]
+    first_name: str
+    last_name: str
     api_key: str
+    email_verified: bool
     is_active: bool
     is_suspended: bool
     created_at: datetime

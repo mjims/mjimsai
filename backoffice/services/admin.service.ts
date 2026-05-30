@@ -1,5 +1,5 @@
 import adminClient from "@/lib/axios";
-import type { LLMModel, LLMModelCreate, Plan, PlanCreate, PlatformStats, UserListAdminResponse } from "@/types";
+import type { AdminCreate, AdminTokenResponse, AdminUser, LLMModel, LLMModelCreate, Plan, PlanCreate, PlatformStats, UserListAdminResponse } from "@/types";
 
 export const adminService = {
   // Plans CRUD
@@ -73,17 +73,82 @@ export const adminService = {
     return data;
   },
 
+  // Admin accounts management
+  async listAdmins(): Promise<AdminUser[]> {
+    const { data } = await adminClient.get<AdminUser[]>("/api/v1/admin/admins");
+    return data;
+  },
+
+  async createAdmin(payload: AdminCreate): Promise<AdminUser> {
+    const { data } = await adminClient.post<AdminUser>("/api/v1/admin/admins", payload);
+    return data;
+  },
+
+  async setAdminActive(id: string, is_active: boolean): Promise<AdminUser> {
+    const { data } = await adminClient.patch<AdminUser>(`/api/v1/admin/admins/${id}`, { is_active });
+    return data;
+  },
+
+  async deleteAdmin(id: string): Promise<void> {
+    await adminClient.delete(`/api/v1/admin/admins/${id}`);
+  },
+
+  // Auth flow (email + password + email-OTP 2FA)
+  async login(email: string, password: string, remember: boolean): Promise<{ email: string }> {
+    const { data } = await adminClient.post<{ otp_required: boolean; email: string }>(
+      "/api/v1/admin/auth/login", { email, password, remember },
+    );
+    return data;
+  },
+
+  async verifyOtp(email: string, code: string, remember: boolean): Promise<AdminTokenResponse> {
+    const { data } = await adminClient.post<AdminTokenResponse>(
+      "/api/v1/admin/auth/verify-otp", { email, code, remember },
+    );
+    localStorage.setItem("mjimsai_admin_token", data.access_token);
+    localStorage.setItem("mjimsai_admin", JSON.stringify(data.admin));
+    return data;
+  },
+
+  async acceptInvite(token: string, password: string): Promise<AdminTokenResponse> {
+    const { data } = await adminClient.post<AdminTokenResponse>(
+      "/api/v1/admin/auth/accept-invite", { token, password },
+    );
+    localStorage.setItem("mjimsai_admin_token", data.access_token);
+    localStorage.setItem("mjimsai_admin", JSON.stringify(data.admin));
+    return data;
+  },
+
+  async getMe(): Promise<AdminUser> {
+    const { data } = await adminClient.get<AdminUser>("/api/v1/admin/auth/me");
+    return data;
+  },
+
+  async updateMe(payload: {
+    first_name?: string; last_name?: string; email?: string;
+    current_password?: string; new_password?: string;
+  }): Promise<AdminUser> {
+    const { data } = await adminClient.put<AdminUser>("/api/v1/admin/auth/me", payload);
+    localStorage.setItem("mjimsai_admin", JSON.stringify(data));
+    return data;
+  },
+
+  getAdmin(): AdminUser | null {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = localStorage.getItem("mjimsai_admin");
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  },
+
   isAuthenticated(): boolean {
     if (typeof window === "undefined") return false;
     return !!localStorage.getItem("mjimsai_admin_token");
   },
 
-  login(key: string) {
-    localStorage.setItem("mjimsai_admin_token", key);
-  },
-
   logout() {
     localStorage.removeItem("mjimsai_admin_token");
+    localStorage.removeItem("mjimsai_admin");
     window.location.href = "/login";
   },
 };

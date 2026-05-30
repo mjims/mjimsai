@@ -1,4 +1,4 @@
-"""User model — standalone, no organization dependency."""
+"""AdminUser model — backoffice administrators (email + password + email-OTP 2FA)."""
 
 from __future__ import annotations
 
@@ -7,13 +7,13 @@ from datetime import datetime, timezone
 
 from sqlalchemy import Boolean, DateTime, String
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
 
 
-class User(Base):
-    __tablename__ = "users"
+class AdminUser(Base):
+    __tablename__ = "admin_users"
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -21,14 +21,17 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     first_name: Mapped[str] = mapped_column(String(100), nullable=False, default="")
     last_name: Mapped[str] = mapped_column(String(100), nullable=False, default="")
-    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
 
-    # Widget API key — used by the embeddable widget to authenticate
-    api_key: Mapped[str] = mapped_column(String(128), unique=True, nullable=False, index=True)
+    # Nullable until the invited admin sets their password
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
-    email_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    is_suspended: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    # Invitation flow (set-password link)
+    invite_token_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    invite_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
@@ -39,12 +42,5 @@ class User(Base):
         onupdate=lambda: datetime.now(timezone.utc),
     )
 
-    # Relationships
-    agents = relationship("Agent", back_populates="user", cascade="all, delete-orphan")
-
-    @property
-    def full_name(self) -> str:
-        return f"{self.first_name} {self.last_name}".strip()
-
     def __repr__(self) -> str:
-        return f"<User {self.email}>"
+        return f"<AdminUser {self.email}>"

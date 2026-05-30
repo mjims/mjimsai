@@ -55,17 +55,29 @@
       "submit": "Sign in",
       "noAccount": "No account yet?",
       "register": "Create an account",
-      "error": "Invalid email or password"
+      "error": "Invalid email or password",
+      "remember": "Remember me",
+      "emailNotVerified": "Email not verified. Enter the code you received."
     },
     "register": {
       "title": "Create your account",
       "subtitle": "Join MjimsAI and create your first AI agents",
       "email": "Email",
-      "username": "Username",
       "password": "Password",
       "submit": "Create my account",
       "hasAccount": "Already have an account?",
-      "login": "Sign in"
+      "login": "Sign in",
+      "firstName": "First name",
+      "lastName": "Last name"
+    },
+    "verify": {
+      "title": "Verify your email",
+      "subtitle": "Enter the 6-digit code sent to",
+      "code": "Verification code",
+      "submit": "Verify",
+      "resend": "Resend code",
+      "sent": "Code resent.",
+      "error": "Invalid or expired code"
     }
   },
   "dashboard": {

@@ -85,10 +85,10 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
         <div className="p-4 border-t border-surface-100">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-sm font-bold">
-              {user?.username?.charAt(0).toUpperCase() || "?"}
+              {user?.first_name?.charAt(0).toUpperCase() || "?"}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-surface-900 truncate">{user?.username || "..."}</p>
+              <p className="text-sm font-medium text-surface-900 truncate">{[user?.first_name, user?.last_name].filter(Boolean).join(" ") || "..."}</p>
               <p className="text-xs text-surface-500 truncate">{user?.email || "..."}</p>
             </div>
             <button onClick={logout} title="Déconnexion"

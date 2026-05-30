@@ -10,6 +10,8 @@ const NAV = [
   { href: "/dashboard/plans", label: "Plans", icon: "💳" },
   { href: "/dashboard/models", label: "Modèles IA", icon: "🧠" },
   { href: "/dashboard/users", label: "Utilisateurs", icon: "👥" },
+  { href: "/dashboard/admins", label: "Admins", icon: "🛡️" },
+  { href: "/dashboard/profile", label: "Mon profil", icon: "👤" },
   { href: "/dashboard/system", label: "Système", icon: "⚙️" },
 ];
 
