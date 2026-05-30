@@ -86,6 +86,12 @@ class Settings(BaseSettings):
     # --- CORS ---
     CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3001"
 
+    # --- Reverse proxy / rate limiting ---
+    # Comma-separated IPs/CIDRs of trusted proxies. X-Forwarded-For is only
+    # honored when the direct peer is in this list (anti-spoofing). Empty = never
+    # trust the header, use the direct socket peer.
+    TRUSTED_PROXIES: str = ""
+
     # --- File uploads ---
     MAX_UPLOAD_SIZE_MB: int = 20
     UPLOAD_DIR: str = "./uploads"
@@ -110,6 +116,10 @@ class Settings(BaseSettings):
     @property
     def api_keys_list(self) -> list[str]:
         return [k.strip() for k in self.API_KEYS.split(",") if k.strip()]
+
+    @property
+    def trusted_proxies_list(self) -> list[str]:
+        return [p.strip() for p in self.TRUSTED_PROXIES.split(",") if p.strip()]
 
     @property
     def sebpay_base_url(self) -> str:

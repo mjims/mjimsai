@@ -2,11 +2,9 @@
 Auth routes — register (+ email OTP), login, current user, profile update.
 """
 
-from __future__ import annotations
-
 from datetime import timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +13,7 @@ from app.core import create_access_token, hash_password, verify_password, genera
 from app.database import get_db
 from app.api.deps import get_current_user
 from app.models.user import User
+from app.ratelimit import limiter
 from app.schemas.auth import (
     LoginRequest,
     RegisterRequest,
@@ -41,14 +40,25 @@ def _token_for(user: User, remember: bool) -> str:
 
 
 @router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
-async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)):
-    """Register a new user. Account requires email verification (OTP) before login."""
+@limiter.limit("5/minute")
+async def register(request: Request, data: RegisterRequest, db: AsyncSession = Depends(get_db)):
+    """Register a new user. Account requires email verification (OTP) before login.
+
+    Anti-enumeration: the response is identical whether or not the email already
+    exists. If it exists and is unverified, we (re)send the verification code.
+    """
     settings = get_settings()
     if not settings.SAAS_MODE:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Registration disabled")
 
-    if (await db.execute(select(User).where(User.email == data.email))).scalar_one_or_none():
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
+    existing = (await db.execute(select(User).where(User.email == data.email))).scalar_one_or_none()
+    if existing:
+        if not existing.email_verified:
+            await otp_service.create_and_send_otp(
+                db, email=existing.email, purpose="email_verification",
+                subject_type="user", subject_id=existing.id,
+            )
+        return RegisterResponse(email=data.email)
 
     user = User(
         email=data.email,
@@ -69,7 +79,8 @@ async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/verify-email", response_model=TokenResponse)
-async def verify_email(data: VerifyEmailRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("10/minute")
+async def verify_email(request: Request, data: VerifyEmailRequest, db: AsyncSession = Depends(get_db)):
     """Verify the email OTP, activate the account, and return a session token."""
     ok = await otp_service.verify_otp(db, data.email, "email_verification", data.code)
     if not ok:
@@ -88,7 +99,8 @@ async def verify_email(data: VerifyEmailRequest, db: AsyncSession = Depends(get_
 
 
 @router.post("/resend-otp", status_code=status.HTTP_204_NO_CONTENT)
-async def resend_otp(data: ResendOtpRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("3/minute")
+async def resend_otp(request: Request, data: ResendOtpRequest, db: AsyncSession = Depends(get_db)):
     """Resend an email-verification OTP (no-op response even if email unknown)."""
     result = await db.execute(select(User).where(User.email == data.email))
     user = result.scalar_one_or_none()
@@ -100,7 +112,8 @@ async def resend_otp(data: ResendOtpRequest, db: AsyncSession = Depends(get_db))
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("10/minute")
+async def login(request: Request, data: LoginRequest, db: AsyncSession = Depends(get_db)):
     """Login with email and password."""
     result = await db.execute(
         select(User).where(User.email == data.email, User.is_active == True)  # noqa: E712

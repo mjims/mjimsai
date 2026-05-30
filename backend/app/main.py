@@ -11,10 +11,33 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
-from app.config import get_settings
+from app.config import Environment, Settings, get_settings
+from app.ratelimit import limiter
 
 logger = logging.getLogger(__name__)
+
+
+def _validate_production_settings(settings: Settings) -> None:
+    """Fail fast in production if critical secrets are missing or left at defaults."""
+    if settings.ENVIRONMENT != Environment.production:
+        return
+
+    problems: list[str] = []
+    if not settings.JWT_SECRET or "CHANGE-ME" in settings.JWT_SECRET or len(settings.JWT_SECRET) < 32:
+        problems.append("JWT_SECRET must be set to a strong value (>= 32 chars)")
+    if not settings.ENCRYPTION_KEY:
+        problems.append("ENCRYPTION_KEY must be set (Fernet key) to encrypt per-agent API keys")
+    if not settings.SMTP_HOST:
+        problems.append("SMTP_HOST must be set in production (email OTP / 2FA require real email delivery)")
+
+    if problems:
+        raise RuntimeError(
+            "Refusing to start in production with insecure configuration:\n  - "
+            + "\n  - ".join(problems)
+        )
 
 
 @asynccontextmanager
@@ -39,6 +62,7 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     settings = get_settings()
+    _validate_production_settings(settings)
 
     app = FastAPI(
         title=settings.APP_NAME,
@@ -48,6 +72,10 @@ def create_app() -> FastAPI:
         redoc_url="/redoc" if settings.ENVIRONMENT.value != "production" else None,
         lifespan=lifespan,
     )
+
+    # Rate limiting (slowapi)
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
     app.add_middleware(
         CORSMiddleware,

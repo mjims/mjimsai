@@ -2,11 +2,9 @@
 Backoffice admin authentication: email + password + email-OTP 2FA, invitations.
 """
 
-from __future__ import annotations
-
 from datetime import timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +13,7 @@ from app.config import get_settings
 from app.core import create_access_token, hash_password, verify_password
 from app.database import get_db
 from app.models.admin_user import AdminUser
+from app.ratelimit import limiter
 from app.schemas.admin_auth import (
     AcceptInviteRequest,
     AdminLoginRequest,
@@ -41,7 +40,8 @@ def _admin_token(admin: AdminUser, remember: bool) -> str:
 
 
 @router.post("/login", response_model=AdminLoginResponse)
-async def admin_login(data: AdminLoginRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("10/minute")
+async def admin_login(request: Request, data: AdminLoginRequest, db: AsyncSession = Depends(get_db)):
     """Step 1: verify credentials, then email a 2FA OTP. No token yet."""
     result = await db.execute(select(AdminUser).where(AdminUser.email == data.email))
     admin = result.scalar_one_or_none()
@@ -55,7 +55,8 @@ async def admin_login(data: AdminLoginRequest, db: AsyncSession = Depends(get_db
 
 
 @router.post("/verify-otp", response_model=AdminTokenResponse)
-async def admin_verify_otp(data: AdminVerifyOtpRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("10/minute")
+async def admin_verify_otp(request: Request, data: AdminVerifyOtpRequest, db: AsyncSession = Depends(get_db)):
     """Step 2: verify the OTP and issue an admin JWT."""
     ok = await otp_service.verify_otp(db, data.email, "login_2fa", data.code)
     if not ok:
@@ -74,7 +75,8 @@ async def admin_verify_otp(data: AdminVerifyOtpRequest, db: AsyncSession = Depen
 
 
 @router.post("/accept-invite", response_model=AdminTokenResponse)
-async def accept_invite(data: AcceptInviteRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("5/minute")
+async def accept_invite(request: Request, data: AcceptInviteRequest, db: AsyncSession = Depends(get_db)):
     """Set the password for an invited admin. Token format: '<admin_id>.<secret>'."""
     import uuid
 
