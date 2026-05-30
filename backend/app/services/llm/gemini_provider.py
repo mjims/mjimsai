@@ -87,11 +87,3 @@ class GeminiProvider(BaseLLMProvider):
         ):
             if chunk.text:
                 yield chunk.text
-
-    def list_models(self) -> list[str]:
-        return [
-            "gemini-2.0-flash",
-            "gemini-2.0-flash-lite",
-            "gemini-1.5-pro",
-            "gemini-1.5-flash",
-        ]

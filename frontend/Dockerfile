@@ -1,5 +1,5 @@
 # ============================================================
-# MILA Open — Next.js Dashboard
+# MjimsAI — Next.js Dashboard
 # Multi-stage build for minimal production image
 # ============================================================
 
@@ -41,8 +41,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# next-intl requires these files at runtime to resolve the i18n config
-COPY --from=builder --chown=nextjs:nodejs /app/i18n ./i18n
+# next-intl loads translation messages at runtime (config lives in lib/i18n.ts,
+# bundled into the standalone server). Copy the message catalogs explicitly.
 COPY --from=builder --chown=nextjs:nodejs /app/messages ./messages
 
 USER nextjs

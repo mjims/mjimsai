@@ -49,6 +49,7 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = None
     GOOGLE_API_KEY: Optional[str] = None
     XAI_API_KEY: Optional[str] = None  # Grok (xAI)
+    DEEPSEEK_API_KEY: Optional[str] = None
 
     # --- Encryption (Fernet) for per-agent API keys ---
     # Generate: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"

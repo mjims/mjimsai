@@ -1,5 +1,5 @@
 import adminClient from "@/lib/axios";
-import type { Plan, PlanCreate, PlatformStats, UserListAdminResponse } from "@/types";
+import type { LLMModel, LLMModelCreate, Plan, PlanCreate, PlatformStats, UserListAdminResponse } from "@/types";
 
 export const adminService = {
   // Plans CRUD
@@ -25,6 +25,31 @@ export const adminService = {
 
   async deletePlan(id: string): Promise<void> {
     await adminClient.delete(`/api/v1/admin/plans/${id}`);
+  },
+
+  // LLM Models CRUD
+  async listSupportedProviders(): Promise<string[]> {
+    const { data } = await adminClient.get<string[]>("/api/v1/admin/providers");
+    return data;
+  },
+
+  async listModels(): Promise<LLMModel[]> {
+    const { data } = await adminClient.get<LLMModel[]>("/api/v1/admin/models");
+    return data;
+  },
+
+  async createModel(payload: LLMModelCreate): Promise<LLMModel> {
+    const { data } = await adminClient.post<LLMModel>("/api/v1/admin/models", payload);
+    return data;
+  },
+
+  async updateModel(id: string, payload: Partial<LLMModelCreate>): Promise<LLMModel> {
+    const { data } = await adminClient.put<LLMModel>(`/api/v1/admin/models/${id}`, payload);
+    return data;
+  },
+
+  async deleteModel(id: string): Promise<void> {
+    await adminClient.delete(`/api/v1/admin/models/${id}`);
   },
 
   // Stats

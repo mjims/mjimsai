@@ -16,7 +16,7 @@ from app.models.plan import Plan
 from app.models.user import User
 from app.schemas import AgentCreate, AgentUpdate, AgentResponse, AgentListResponse
 from app.services import agent_service
-from app.services.llm.factory import get_available_providers
+from app.services.llm.factory import get_available_models
 from app.services import usage_service
 
 router = APIRouter(prefix="/agents", tags=["Agents"])
@@ -56,9 +56,12 @@ async def create_agent(
 
 
 @router.get("/providers", response_model=dict)
-async def list_providers():
-    """List all supported LLM providers and their models."""
-    return get_available_providers()
+async def list_providers(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List available LLM providers and their active models (admin-managed)."""
+    return await get_available_models(db)
 
 
 @router.get("/{agent_id}", response_model=AgentResponse)

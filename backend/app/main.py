@@ -27,9 +27,8 @@ async def lifespan(app: FastAPI):
     logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
     logger.info(f"Environment: {settings.ENVIRONMENT.value}")
 
-    from app.services.llm.factory import get_available_providers
-    providers = get_available_providers()
-    logger.info(f"Available LLM providers: {list(providers.keys())}")
+    from app.services.llm.factory import get_supported_providers
+    logger.info(f"Supported LLM providers: {get_supported_providers()}")
 
     yield
 

@@ -71,11 +71,3 @@ class AnthropicProvider(BaseLLMProvider):
         ) as stream:
             async for text in stream.text_stream:
                 yield text
-
-    def list_models(self) -> list[str]:
-        return [
-            "claude-sonnet-4-20250514",
-            "claude-3-5-sonnet-20241022",
-            "claude-3-5-haiku-20241022",
-            "claude-3-opus-20240229",
-        ]

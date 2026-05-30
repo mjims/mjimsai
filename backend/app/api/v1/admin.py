@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import validate_admin_key
 from app.database import get_db
 from app.models.agent import Agent
+from app.models.llm_model import LLMModel
 from app.models.plan import Plan
 from app.models.usage import UsageRecord
 from app.models.user import User
@@ -23,7 +24,9 @@ from app.schemas.admin import (
     UserAdminResponse,
     UserListAdminResponse,
 )
+from app.schemas.llm_model import LLMModelCreate, LLMModelResponse, LLMModelUpdate
 from app.schemas.plan import PlanCreate, PlanResponse, PlanUpdate
+from app.services.llm.factory import get_supported_providers
 from app.services.usage_service import _current_year_month
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -114,6 +117,91 @@ async def delete_plan(
     else:
         await db.delete(plan)
         await db.commit()
+
+
+# ─── LLM Models CRUD ──────────────────────────────────────────────────────────
+
+@router.get("/providers", response_model=list[str])
+async def list_supported_providers(
+    _: bool = Depends(validate_admin_key),
+):
+    """Code-backed provider slugs that models can be attached to."""
+    return get_supported_providers()
+
+
+@router.get("/models", response_model=list[LLMModelResponse])
+async def list_models(
+    _: bool = Depends(validate_admin_key),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all models (active and inactive), grouped-friendly order."""
+    result = await db.execute(
+        select(LLMModel).order_by(LLMModel.provider, LLMModel.sort_order, LLMModel.model_id)
+    )
+    return result.scalars().all()
+
+
+@router.post("/models", response_model=LLMModelResponse, status_code=status.HTTP_201_CREATED)
+async def create_model(
+    data: LLMModelCreate,
+    _: bool = Depends(validate_admin_key),
+    db: AsyncSession = Depends(get_db),
+):
+    if data.provider not in get_supported_providers():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported provider '{data.provider}'. Supported: {get_supported_providers()}",
+        )
+    existing = await db.execute(
+        select(LLMModel).where(
+            LLMModel.provider == data.provider, LLMModel.model_id == data.model_id
+        )
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Model '{data.model_id}' already exists for provider '{data.provider}'",
+        )
+
+    model = LLMModel(**data.model_dump())
+    db.add(model)
+    await db.commit()
+    await db.refresh(model)
+    return model
+
+
+@router.put("/models/{model_id}", response_model=LLMModelResponse)
+async def update_model(
+    model_id: uuid.UUID,
+    data: LLMModelUpdate,
+    _: bool = Depends(validate_admin_key),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(LLMModel).where(LLMModel.id == model_id))
+    model = result.scalar_one_or_none()
+    if not model:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Model not found")
+
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(model, field, value)
+
+    await db.commit()
+    await db.refresh(model)
+    return model
+
+
+@router.delete("/models/{model_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_model(
+    model_id: uuid.UUID,
+    _: bool = Depends(validate_admin_key),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(LLMModel).where(LLMModel.id == model_id))
+    model = result.scalar_one_or_none()
+    if not model:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Model not found")
+    await db.delete(model)
+    await db.commit()
 
 
 # ─── Platform Stats ───────────────────────────────────────────────────────────

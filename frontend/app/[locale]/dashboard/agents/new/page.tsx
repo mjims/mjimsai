@@ -7,12 +7,9 @@ import { agentsService } from "@/services/agents.service";
 import { getApiError } from "@/lib/axios";
 import type { WidgetConfig } from "@/types";
 
-const DEFAULT_PROVIDERS: Record<string, string[]> = {
-  openai: ["gpt-4o", "gpt-4o-mini", "o1-mini"],
-  anthropic: ["claude-3-5-sonnet-latest", "claude-3-5-haiku-latest"],
-  gemini: ["gemini-2.5-flash", "gemini-2.5-pro"],
-  grok: ["grok-2-1212"],
-};
+// Providers & models are admin-managed (DB-sourced via the API). No hardcoded
+// fallback so the UI always reflects the current catalog.
+const DEFAULT_PROVIDERS: Record<string, string[]> = {};
 
 const PROVIDER_LABELS: Record<string, string> = {
   openai: "OpenAI",

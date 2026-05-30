@@ -31,6 +31,25 @@ export interface PlanCreate {
   sort_order: number;
 }
 
+export interface LLMModel {
+  id: string;
+  provider: string;
+  model_id: string;
+  label: string;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LLMModelCreate {
+  provider: string;
+  model_id: string;
+  label: string;
+  is_active: boolean;
+  sort_order: number;
+}
+
 export interface UserAdminResponse {
   id: string;
   email: string;

@@ -53,8 +53,3 @@ class BaseLLMProvider(ABC):
     ) -> AsyncIterator[str]:
         """Stream a chat completion response, yielding text chunks."""
         ...
-
-    @abstractmethod
-    def list_models(self) -> list[str]:
-        """Return available models for this provider."""
-        ...

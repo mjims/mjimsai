@@ -4,7 +4,8 @@ Créez, personnalisez et déployez des agents IA conversationnels sur n'importe 
 
 ## ✨ Fonctionnalités
 
-- **Multi-Provider LLM** — Claude (Anthropic), GPT-4o (OpenAI), Gemini (Google), Grok (xAI)
+- **Multi-Provider LLM** — Claude (Anthropic), GPT (OpenAI), Gemini (Google), Grok (xAI), DeepSeek
+- **Modèles dynamiques** — La liste des modèles par provider est gérée en backoffice (CRUD), pas codée en dur
 - **Agents Customisables** — Prompt système, modèle, température, tokens max, clé LLM par agent (chiffrée)
 - **Widget Embeddable** — Script JS intégrable sur tout site web
 - **Dashboard Utilisateur** — Gestion des agents, conversations, abonnements
@@ -143,6 +144,14 @@ mjimsai/
 - Champs : nom (slug), label, limite de conversations (-1 = illimité), prix EUR & XOF pour 3 périodes (mensuel / 6 mois / annuel), fonctionnalités, actif, ordre.
 - L'abonnement est attaché **à un agent** (onglet « Abonnement » sur la page de l'agent).
 - Quota appliqué à la création de conversation (HTTP 429 si dépassé).
+
+## 🧠 Providers & Modèles IA
+
+- Les **providers** (anthropic, openai, gemini, grok, deepseek) sont des intégrations code (SDK). Ajouter un provider = code.
+- Les **modèles** d'un provider sont des données, gérées depuis le backoffice (`/dashboard/models`).
+  - Désactiver un modèle déprécié ou ajouter un nouveau ne demande **aucune** modification de code.
+  - L'app récupère les modèles actifs via `GET /api/v1/agents/providers` (groupés par provider).
+- DeepSeek utilise l'API compatible OpenAI (`https://api.deepseek.com`), clé `DEEPSEEK_API_KEY`.
 
 ### Sebpay (Mobile Money)
 

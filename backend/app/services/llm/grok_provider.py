@@ -78,10 +78,3 @@ class GrokProvider(BaseLLMProvider):
         async for chunk in stream:
             if chunk.choices and chunk.choices[0].delta.content:
                 yield chunk.choices[0].delta.content
-
-    def list_models(self) -> list[str]:
-        return [
-            "grok-3",
-            "grok-3-mini",
-            "grok-2",
-        ]

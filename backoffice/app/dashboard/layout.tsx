@@ -8,6 +8,7 @@ import { adminService } from "@/services/admin.service";
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: "📊", exact: true },
   { href: "/dashboard/plans", label: "Plans", icon: "💳" },
+  { href: "/dashboard/models", label: "Modèles IA", icon: "🧠" },
   { href: "/dashboard/users", label: "Utilisateurs", icon: "👥" },
   { href: "/dashboard/system", label: "Système", icon: "⚙️" },
 ];
