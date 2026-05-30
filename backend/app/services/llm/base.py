@@ -11,6 +11,7 @@ from typing import AsyncIterator
 class LLMMessage:
     role: str  # "user", "assistant", "system"
     content: str
+    images: list[str] = field(default_factory=list)  # base64 data URLs (vision providers)
 
 
 @dataclass

@@ -112,6 +112,7 @@ async def process_chat_message(
     agent: Agent,
     conversation: Conversation,
     user_message_text: str,
+    images: Optional[list[str]] = None,
 ) -> LLMResponse:
     user_msg = Message(conversation_id=conversation.id, role="user", content=user_message_text)
     db.add(user_msg)
@@ -119,6 +120,9 @@ async def process_chat_message(
 
     history = await get_conversation_history(db, conversation.id)
     llm_messages = [LLMMessage(role=m.role, content=m.content) for m in history]
+    # Attach inbound images to the latest user turn (vision-capable providers).
+    if images and llm_messages and llm_messages[-1].role == "user":
+        llm_messages[-1].images = images
 
     knowledge_context = await _build_context(db, agent, user_message_text)
     system_prompt = agent.system_prompt + (knowledge_context if knowledge_context else "")

@@ -15,11 +15,20 @@
       "cta": "Get started for free",
       "ctaSecondary": "View pricing"
     },
+    "trust": {
+      "title": "Works with the leading models"
+    },
+    "mockup": {
+      "online": "Online",
+      "user": "Hi, do you ship internationally?",
+      "bot": "Yes! We ship to over 40 countries. Want a delivery estimate for your region?"
+    },
     "features": {
       "title": "Everything you need",
+      "subtitle": "A complete platform to build, deploy and manage your conversational agents.",
       "multiProvider": {
         "title": "Multi-Provider LLM",
-        "desc": "Claude, GPT-4o, Gemini, Grok. Use your own API key."
+        "desc": "Claude, GPT-4o, Gemini, Grok, DeepSeek. Use your own API key."
       },
       "widget": {
         "title": "Embeddable Widget",
@@ -32,8 +41,100 @@
       "analytics": {
         "title": "Analytics",
         "desc": "Track conversations and optimize your agents in real time."
+      },
+      "whatsapp": {
+        "title": "WhatsApp Channel",
+        "desc": "Connect your WhatsApp Business number: your agent replies to customers directly."
+      },
+      "voice": {
+        "title": "Voice messages",
+        "desc": "Customers send a voice note, the agent transcribes it and replies — based on your plan."
       }
+    },
+    "how": {
+      "title": "How it works",
+      "subtitle": "Three steps to take your agent live.",
+      "step1": {
+        "title": "Create your agent",
+        "desc": "Pick the model, tone and system prompt. Connect your own API key."
+      },
+      "step2": {
+        "title": "Feed it",
+        "desc": "Upload your documents for precise answers grounded in your own data."
+      },
+      "step3": {
+        "title": "Deploy everywhere",
+        "desc": "Website widget, WhatsApp channel, voice messages: one agent, many channels."
+      }
+    },
+    "stats": {
+      "s1": { "value": "5+", "label": "Supported LLM models" },
+      "s2": { "value": "2 lines", "label": "To embed the widget" },
+      "s3": { "value": "40+", "label": "Languages supported" }
+    },
+    "faq": {
+      "title": "Frequently asked questions",
+      "items": [
+        { "q": "Do I need my own API key?", "a": "You can use your own API key for each agent, or the platform key depending on your plan. Your keys are encrypted and never exposed in clear text." },
+        { "q": "Can I embed the agent on any website?", "a": "Yes. The widget embeds with a simple two-line JavaScript snippet, on any website or CMS." },
+        { "q": "How does the WhatsApp channel work?", "a": "You connect your own WhatsApp Business account (Meta Cloud API). Your agent then automatically replies to incoming messages, based on your subscription." },
+        { "q": "Are voice messages supported?", "a": "Depending on your plan, incoming voice messages are automatically transcribed and then handled as text by the agent." },
+        { "q": "Can I change plans anytime?", "a": "Yes, you can upgrade or downgrade whenever you want from your dashboard." }
+      ]
+    },
+    "finalCta": {
+      "title": "Ready to launch your AI agent?",
+      "subtitle": "Start for free, no credit card required.",
+      "cta": "Get started for free"
     }
+  },
+  "about": {
+    "title": "About MjimsAI",
+    "subtitle": "We make conversational AI accessible to every business, without the technical complexity.",
+    "mission": {
+      "title": "Our mission",
+      "body": "MjimsAI lets any business deploy a reliable AI agent, grounded in its own data, across every channel — website, WhatsApp and beyond. We believe building a smart assistant should take minutes, not months."
+    },
+    "values": {
+      "title": "Our values",
+      "v1": { "title": "Freedom of choice", "desc": "Multi-provider by design: use the model and API key that suit you, with no lock-in." },
+      "v2": { "title": "Security first", "desc": "Encrypted keys, signed webhooks, per-tenant isolation. Your data and your customers' data stay protected." },
+      "v3": { "title": "Accessible everywhere", "desc": "Multilingual and multi-channel, built for Europe and West Africa alike." }
+    },
+    "tech": {
+      "title": "Our technology",
+      "body": "Built on a modern stack — FastAPI, Next.js and the best language models available. An architecture designed for reliability, performance and compliance."
+    },
+    "cta": {
+      "title": "Join the businesses automating their customer relationships.",
+      "button": "Create my account"
+    }
+  },
+  "contact": {
+    "title": "Contact us",
+    "subtitle": "A question, a demo, a partnership? Write to us — we reply quickly.",
+    "name": "Name",
+    "email": "Email",
+    "subject": "Subject",
+    "message": "Message",
+    "submit": "Send message",
+    "sending": "Sending...",
+    "success": "Message sent! We'll get back to you as soon as possible.",
+    "error": "Sending failed. Please try again later.",
+    "again": "Send another message",
+    "errors": {
+      "required": "This field is required.",
+      "email": "Invalid email address."
+    }
+  },
+  "footer": {
+    "tagline": "The platform to build and deploy conversational AI agents across all your channels.",
+    "product": "Product",
+    "company": "Company",
+    "account": "Account",
+    "features": "Features",
+    "how": "How it works",
+    "rights": "All rights reserved."
   },
   "pricing": {
     "title": "Simple, transparent pricing",

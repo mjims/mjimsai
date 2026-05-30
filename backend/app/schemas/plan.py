@@ -25,6 +25,8 @@ class PlanCreate(BaseModel):
     features: list[str] = []
     is_active: bool = True
     sort_order: int = 0
+    whatsapp_enabled: bool = False
+    voice_enabled: bool = False
 
 
 class PlanUpdate(BaseModel):
@@ -42,6 +44,8 @@ class PlanUpdate(BaseModel):
     features: Optional[list[str]] = None
     is_active: Optional[bool] = None
     sort_order: Optional[int] = None
+    whatsapp_enabled: Optional[bool] = None
+    voice_enabled: Optional[bool] = None
 
 
 class PlanResponse(BaseModel):
@@ -61,6 +65,8 @@ class PlanResponse(BaseModel):
     features: list[str]
     is_active: bool
     sort_order: int
+    whatsapp_enabled: bool
+    voice_enabled: bool
     created_at: datetime
     updated_at: datetime
 

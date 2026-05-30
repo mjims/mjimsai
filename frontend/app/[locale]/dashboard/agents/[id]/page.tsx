@@ -10,9 +10,9 @@ import { billingService } from "@/services/billing.service";
 import { useAuth } from "@/context/AuthContext";
 import AgentTestChat from "@/components/agents/agent-test-chat";
 import { getApiError } from "@/lib/axios";
-import type { Agent, AgentSubscription, BillingPeriod, KnowledgeDocument, PaymentMethods, Plan, SebpayCountry, SebpayOperatorOption } from "@/types";
+import type { Agent, AgentSubscription, BillingPeriod, KnowledgeDocument, PaymentMethods, Plan, SebpayCountry, SebpayOperatorOption, WhatsAppConfig } from "@/types";
 
-type Tab = "config" | "knowledge" | "subscription" | "apiKey" | "integration";
+type Tab = "config" | "knowledge" | "subscription" | "whatsapp" | "apiKey" | "integration";
 
 const PERIOD_LABELS: Record<BillingPeriod, { label: string; discount: string }> = {
   monthly: { label: "Mensuel", discount: "" },
@@ -69,6 +69,13 @@ export default function AgentDetailPage() {
   const [keyVisible, setKeyVisible] = useState(false);
   const [keyMsg, setKeyMsg] = useState("");
 
+  // WhatsApp tab
+  const [wa, setWa] = useState<WhatsAppConfig | null>(null);
+  const [waForm, setWaForm] = useState({ phone_number_id: "", access_token: "", app_secret: "" });
+  const [waSaving, setWaSaving] = useState(false);
+  const [waMsg, setWaMsg] = useState("");
+  const [waCopied, setWaCopied] = useState("");
+
   const [uploading, setUploading] = useState(false);
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -96,6 +103,38 @@ export default function AgentDetailPage() {
     }
     load();
   }, [id, router]);
+
+  // Lazy-load WhatsApp config when the tab is first opened.
+  useEffect(() => {
+    if (tab === "whatsapp" && !wa) {
+      agentsService.getWhatsApp(id).then((c) => {
+        setWa(c);
+        setWaForm((f) => ({ ...f, phone_number_id: c.phone_number_id || "" }));
+      }).catch(() => {});
+    }
+  }, [tab, wa, id]);
+
+  async function handleWaSave(patch: { is_enabled?: boolean } = {}) {
+    if (!agent) return;
+    setWaSaving(true); setWaMsg("");
+    try {
+      const payload: Record<string, unknown> = { ...patch };
+      if (waForm.phone_number_id) payload.phone_number_id = waForm.phone_number_id;
+      if (waForm.access_token) payload.access_token = waForm.access_token;
+      if (waForm.app_secret) payload.app_secret = waForm.app_secret;
+      const updated = await agentsService.updateWhatsApp(agent.id, payload);
+      setWa(updated);
+      setWaForm((f) => ({ ...f, access_token: "", app_secret: "" }));
+      setWaMsg("Configuration enregistrée.");
+    } catch (err) { setWaMsg(getApiError(err)); }
+    finally { setWaSaving(false); }
+  }
+
+  function waCopy(text: string, label: string) {
+    navigator.clipboard.writeText(text);
+    setWaCopied(label);
+    setTimeout(() => setWaCopied(""), 2000);
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault(); setSaveError("");
@@ -201,6 +240,7 @@ export default function AgentDetailPage() {
     { key: "config", label: t("tabs.config") },
     { key: "knowledge", label: t("tabs.knowledge") },
     { key: "subscription", label: `Abonnement${sub?.plan ? " ✓" : ""}` },
+    { key: "whatsapp", label: `WhatsApp${wa?.is_enabled ? " ✓" : ""}` },
     { key: "apiKey", label: `${t("tabs.apiKey")} ${agent.has_custom_api_key ? "🔑" : ""}` },
     { key: "integration", label: t("tabs.integration") },
   ];
@@ -447,6 +487,86 @@ export default function AgentDetailPage() {
                 </div>
               </div>
             </div>
+          )}
+        </div>
+      )}
+
+      {/* WhatsApp */}
+      {tab === "whatsapp" && (
+        <div className="bg-white rounded-2xl border border-surface-200 p-6 space-y-5">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">🟢</span>
+            <h2 className="text-lg font-semibold">Canal WhatsApp</h2>
+          </div>
+
+          {!wa ? (
+            <div className="flex items-center justify-center h-32"><div className="animate-spin rounded-full h-6 w-6 border-2 border-primary-500 border-t-transparent" /></div>
+          ) : !wa.allowed ? (
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
+              L&apos;intégration WhatsApp n&apos;est pas incluse dans le plan de cet agent.{" "}
+              <button onClick={() => setTab("subscription")} className="font-medium underline">Mettre à niveau l&apos;abonnement</button>.
+            </div>
+          ) : (
+            <>
+              <p className="text-sm text-surface-500">
+                Connectez votre compte WhatsApp Business (Meta Cloud API). Renseignez vos identifiants, puis configurez le webhook ci-dessous dans Meta.
+              </p>
+
+              {/* Enable toggle */}
+              <div className="flex items-center gap-3">
+                <button type="button" onClick={() => handleWaSave({ is_enabled: !wa.is_enabled })} disabled={waSaving}
+                  className={`w-10 h-6 rounded-full p-0.5 transition-colors disabled:opacity-60 ${wa.is_enabled ? "bg-emerald-500" : "bg-surface-300"}`}>
+                  <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${wa.is_enabled ? "translate-x-4" : "translate-x-0"}`} />
+                </button>
+                <span className="text-sm text-surface-700">{wa.is_enabled ? "Canal activé" : "Canal désactivé"}</span>
+              </div>
+
+              {/* Credentials */}
+              <div className="space-y-4 pt-2 border-t border-surface-100">
+                <div>
+                  <label className="block text-sm font-medium text-surface-700 mb-1.5">Phone Number ID</label>
+                  <input value={waForm.phone_number_id} onChange={(e) => setWaForm((f) => ({ ...f, phone_number_id: e.target.value }))}
+                    placeholder="123456789012345" className="w-full px-4 py-3 rounded-xl border border-surface-200 focus:border-primary-400 outline-none text-sm font-mono" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-surface-700 mb-1.5">Access Token</label>
+                  <input type="password" autoComplete="off" value={waForm.access_token} onChange={(e) => setWaForm((f) => ({ ...f, access_token: e.target.value }))}
+                    placeholder={wa.access_token_set ? `Configuré (${wa.access_token_masked}) — laisser vide pour conserver` : "EAAG..."}
+                    className="w-full px-4 py-3 rounded-xl border border-surface-200 focus:border-primary-400 outline-none text-sm font-mono" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-surface-700 mb-1.5">App Secret</label>
+                  <input type="password" autoComplete="off" value={waForm.app_secret} onChange={(e) => setWaForm((f) => ({ ...f, app_secret: e.target.value }))}
+                    placeholder={wa.app_secret_set ? `Configuré (${wa.app_secret_masked}) — laisser vide pour conserver` : "Secret de l'app Meta (vérif. signature)"}
+                    className="w-full px-4 py-3 rounded-xl border border-surface-200 focus:border-primary-400 outline-none text-sm font-mono" />
+                </div>
+                <button onClick={() => handleWaSave()} disabled={waSaving}
+                  className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl disabled:opacity-60">
+                  {waSaving ? "..." : "Enregistrer"}
+                </button>
+                {waMsg && <p className="text-sm text-surface-600">{waMsg}</p>}
+              </div>
+
+              {/* Webhook config to paste in Meta */}
+              <div className="space-y-3 pt-2 border-t border-surface-100">
+                <p className="text-sm font-semibold text-surface-700">À configurer dans Meta → WhatsApp → Configuration → Webhooks</p>
+                <div>
+                  <label className="block text-xs font-medium text-surface-400 mb-1">URL de rappel (Callback URL)</label>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 px-3 py-2.5 bg-surface-50 border border-surface-200 rounded-xl text-xs font-mono truncate">{apiUrl}{wa.webhook_path}</code>
+                    <button onClick={() => waCopy(`${apiUrl}${wa.webhook_path}`, "url")} className="px-3 py-2.5 bg-surface-100 hover:bg-surface-200 rounded-xl text-xs font-medium">{waCopied === "url" ? "Copié ✓" : "Copier"}</button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-surface-400 mb-1">Verify Token</label>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 px-3 py-2.5 bg-surface-50 border border-surface-200 rounded-xl text-xs font-mono truncate">{wa.verify_token}</code>
+                    <button onClick={() => waCopy(wa.verify_token, "token")} className="px-3 py-2.5 bg-surface-100 hover:bg-surface-200 rounded-xl text-xs font-medium">{waCopied === "token" ? "Copié ✓" : "Copier"}</button>
+                  </div>
+                </div>
+                <p className="text-xs text-surface-400">Abonnez-vous au champ <code className="font-mono">messages</code> dans Meta. Les messages reçus seront traités par cet agent.</p>
+              </div>
+            </>
           )}
         </div>
       )}

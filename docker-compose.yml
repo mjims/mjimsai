@@ -56,6 +56,7 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM: ${SMTP_FROM:-MjimsAI <no-reply@mjimsai.com>}
       SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
+      CONTACT_EMAIL: ${CONTACT_EMAIL:-}
       FRONTEND_URL: ${NEXT_PUBLIC_FRONTEND_URL:-http://localhost:3000}
       BACKOFFICE_URL: ${NEXT_PUBLIC_BACKOFFICE_URL:-http://localhost:3001}
 

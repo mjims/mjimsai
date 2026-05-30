@@ -18,6 +18,14 @@ class OpenAIProvider(BaseLLMProvider):
     def __init__(self, api_key: str):
         self.client = AsyncOpenAI(api_key=api_key)
 
+    @staticmethod
+    def _content(m: LLMMessage):
+        if not m.images:
+            return m.content
+        parts: list[dict] = [{"type": "text", "text": m.content or ""}]
+        parts.extend({"type": "image_url", "image_url": {"url": img}} for img in m.images)
+        return parts
+
     async def chat(
         self,
         messages: list[LLMMessage],
@@ -27,7 +35,7 @@ class OpenAIProvider(BaseLLMProvider):
         if config.system_prompt:
             api_messages.append({"role": "system", "content": config.system_prompt})
         api_messages.extend(
-            {"role": m.role, "content": m.content}
+            {"role": m.role, "content": self._content(m)}
             for m in messages
             if m.role != "system"
         )

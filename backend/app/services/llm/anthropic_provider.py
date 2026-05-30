@@ -32,6 +32,22 @@ class AnthropicProvider(BaseLLMProvider):
             "messages": api_messages,
         }
 
+    @staticmethod
+    def _content(m: LLMMessage):
+        if not m.images:
+            return m.content
+        blocks: list[dict] = []
+        for img in m.images:
+            # img is a data URL: data:<mime>;base64,<data>
+            try:
+                header, b64 = img.split(",", 1)
+                media_type = header.split(":", 1)[1].split(";", 1)[0]
+            except (ValueError, IndexError):
+                continue
+            blocks.append({"type": "image", "source": {"type": "base64", "media_type": media_type, "data": b64}})
+        blocks.append({"type": "text", "text": m.content or ""})
+        return blocks
+
     async def chat(
         self,
         messages: list[LLMMessage],
@@ -39,7 +55,7 @@ class AnthropicProvider(BaseLLMProvider):
     ) -> LLMResponse:
         # Separate system prompt from messages
         api_messages = [
-            {"role": m.role, "content": m.content}
+            {"role": m.role, "content": self._content(m)}
             for m in messages
             if m.role != "system"
         ]

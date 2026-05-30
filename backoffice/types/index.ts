@@ -12,6 +12,8 @@ export interface Plan {
   features: string[];
   is_active: boolean;
   sort_order: number;
+  whatsapp_enabled: boolean;
+  voice_enabled: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -29,6 +31,8 @@ export interface PlanCreate {
   features: string[];
   is_active: boolean;
   sort_order: number;
+  whatsapp_enabled: boolean;
+  voice_enabled: boolean;
 }
 
 // --- Payments ---

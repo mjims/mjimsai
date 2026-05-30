@@ -9,7 +9,7 @@ type FormData = {
   name: string; label: string; conversations_limit: string;
   price_monthly_eur: string; price_semiannual_eur: string; price_annual_eur: string;
   price_monthly_xof: string; price_semiannual_xof: string; price_annual_xof: string;
-  features: string; is_active: boolean; sort_order: string;
+  features: string; is_active: boolean; sort_order: string; whatsapp_enabled: boolean; voice_enabled: boolean;
 };
 
 const num = (v: number | null | undefined) => (v === null || v === undefined ? "" : String(v));
@@ -29,7 +29,7 @@ export default function EditPlanPage() {
         name: p.name, label: p.label, conversations_limit: String(p.conversations_limit),
         price_monthly_eur: num(p.price_monthly_eur), price_semiannual_eur: num(p.price_semiannual_eur), price_annual_eur: num(p.price_annual_eur),
         price_monthly_xof: num(p.price_monthly_xof), price_semiannual_xof: num(p.price_semiannual_xof), price_annual_xof: num(p.price_annual_xof),
-        features: p.features.join("\n"), is_active: p.is_active, sort_order: String(p.sort_order),
+        features: p.features.join("\n"), is_active: p.is_active, sort_order: String(p.sort_order), whatsapp_enabled: p.whatsapp_enabled, voice_enabled: p.voice_enabled,
       });
     }).catch((err) => setError(getApiError(err)));
   }, [id]);
@@ -56,6 +56,8 @@ export default function EditPlanPage() {
         features: form.features.split("\n").map((f) => f.trim()).filter(Boolean),
         is_active: form.is_active,
         sort_order: parseInt(form.sort_order) || 0,
+        whatsapp_enabled: form.whatsapp_enabled,
+        voice_enabled: form.voice_enabled,
       });
       router.push("/dashboard/plans");
     } catch (err) { setError(getApiError(err)); }
@@ -147,6 +149,22 @@ export default function EditPlanPage() {
             <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${form.is_active ? "translate-x-4" : "translate-x-0"}`} />
           </button>
           <span className="text-sm text-surface-700">Plan actif (visible par les utilisateurs)</span>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={() => set("whatsapp_enabled", !form.whatsapp_enabled)}
+            className={`w-10 h-6 rounded-full p-0.5 transition-colors ${form.whatsapp_enabled ? "bg-emerald-500" : "bg-surface-300"}`}>
+            <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${form.whatsapp_enabled ? "translate-x-4" : "translate-x-0"}`} />
+          </button>
+          <span className="text-sm text-surface-700">Intégration WhatsApp incluse</span>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={() => set("voice_enabled", !form.voice_enabled)}
+            className={`w-10 h-6 rounded-full p-0.5 transition-colors ${form.voice_enabled ? "bg-emerald-500" : "bg-surface-300"}`}>
+            <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${form.voice_enabled ? "translate-x-4" : "translate-x-0"}`} />
+          </button>
+          <span className="text-sm text-surface-700">Messages vocaux (transcription audio) inclus</span>
         </div>
 
         {error && <p className="text-sm text-red-600 bg-red-50 p-3 rounded-xl border border-red-200">{error}</p>}

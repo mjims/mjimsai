@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import logging
 from typing import AsyncIterator
 
@@ -26,12 +27,18 @@ class GeminiProvider(BaseLLMProvider):
     ) -> LLMResponse:
         contents = []
         for m in messages:
-            if m.role != "system":
-                role = "user" if m.role == "user" else "model"
-                contents.append(types.Content(
-                    role=role,
-                    parts=[types.Part(text=m.content)],
-                ))
+            if m.role == "system":
+                continue
+            role = "user" if m.role == "user" else "model"
+            parts = [types.Part(text=m.content)]
+            for img in getattr(m, "images", []):
+                try:
+                    header, b64 = img.split(",", 1)
+                    mime = header.split(":", 1)[1].split(";", 1)[0]
+                    parts.append(types.Part.from_bytes(data=base64.b64decode(b64), mime_type=mime))
+                except (ValueError, IndexError):
+                    continue
+            contents.append(types.Content(role=role, parts=parts))
 
         generation_config = types.GenerateContentConfig(
             temperature=config.temperature,
@@ -67,12 +74,18 @@ class GeminiProvider(BaseLLMProvider):
     ) -> AsyncIterator[str]:
         contents = []
         for m in messages:
-            if m.role != "system":
-                role = "user" if m.role == "user" else "model"
-                contents.append(types.Content(
-                    role=role,
-                    parts=[types.Part(text=m.content)],
-                ))
+            if m.role == "system":
+                continue
+            role = "user" if m.role == "user" else "model"
+            parts = [types.Part(text=m.content)]
+            for img in getattr(m, "images", []):
+                try:
+                    header, b64 = img.split(",", 1)
+                    mime = header.split(":", 1)[1].split(";", 1)[0]
+                    parts.append(types.Part.from_bytes(data=base64.b64decode(b64), mime_type=mime))
+                except (ValueError, IndexError):
+                    continue
+            contents.append(types.Content(role=role, parts=parts))
 
         generation_config = types.GenerateContentConfig(
             temperature=config.temperature,

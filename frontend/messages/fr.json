@@ -15,11 +15,20 @@
       "cta": "Commencer gratuitement",
       "ctaSecondary": "Voir les tarifs"
     },
+    "trust": {
+      "title": "Compatible avec les principaux modèles"
+    },
+    "mockup": {
+      "online": "En ligne",
+      "user": "Bonjour, vous livrez à l'international ?",
+      "bot": "Oui ! Nous livrons dans plus de 40 pays. Souhaitez-vous une estimation des délais pour votre région ?"
+    },
     "features": {
       "title": "Tout ce dont vous avez besoin",
+      "subtitle": "Une plateforme complète pour créer, déployer et piloter vos agents conversationnels.",
       "multiProvider": {
         "title": "Multi-Provider LLM",
-        "desc": "Claude, GPT-4o, Gemini, Grok. Utilisez votre propre clé API."
+        "desc": "Claude, GPT-4o, Gemini, Grok, DeepSeek. Utilisez votre propre clé API."
       },
       "widget": {
         "title": "Widget Embeddable",
@@ -32,8 +41,100 @@
       "analytics": {
         "title": "Analytics",
         "desc": "Suivez les conversations et optimisez vos agents en temps réel."
+      },
+      "whatsapp": {
+        "title": "Canal WhatsApp",
+        "desc": "Connectez votre numéro WhatsApp Business : votre agent répond directement à vos clients."
+      },
+      "voice": {
+        "title": "Messages vocaux",
+        "desc": "Vos clients envoient un vocal, l'agent le transcrit et répond — selon votre offre."
       }
+    },
+    "how": {
+      "title": "Comment ça marche",
+      "subtitle": "Trois étapes pour mettre votre agent en ligne.",
+      "step1": {
+        "title": "Créez votre agent",
+        "desc": "Choisissez le modèle, le ton et le prompt système. Connectez votre propre clé API."
+      },
+      "step2": {
+        "title": "Nourrissez-le",
+        "desc": "Importez vos documents pour des réponses précises ancrées dans vos données."
+      },
+      "step3": {
+        "title": "Déployez partout",
+        "desc": "Widget sur votre site, canal WhatsApp, messages vocaux : un agent, plusieurs canaux."
+      }
+    },
+    "stats": {
+      "s1": { "value": "5+", "label": "Modèles LLM supportés" },
+      "s2": { "value": "2 lignes", "label": "Pour intégrer le widget" },
+      "s3": { "value": "40+", "label": "Langues prises en charge" }
+    },
+    "faq": {
+      "title": "Questions fréquentes",
+      "items": [
+        { "q": "Ai-je besoin de ma propre clé API ?", "a": "Vous pouvez utiliser votre propre clé API pour chaque agent, ou la clé plateforme selon votre offre. Vos clés sont chiffrées et jamais exposées en clair." },
+        { "q": "Puis-je intégrer l'agent sur n'importe quel site ?", "a": "Oui. Le widget s'intègre avec un simple script JavaScript de deux lignes, sur n'importe quel site ou CMS." },
+        { "q": "Comment fonctionne le canal WhatsApp ?", "a": "Vous connectez votre propre compte WhatsApp Business (Meta Cloud API). Votre agent répond alors automatiquement aux messages reçus, selon votre abonnement." },
+        { "q": "Les messages vocaux sont-ils pris en charge ?", "a": "Selon votre offre, les messages vocaux entrants sont transcrits automatiquement puis traités comme du texte par l'agent." },
+        { "q": "Puis-je changer d'offre à tout moment ?", "a": "Oui, vous pouvez passer à une offre supérieure ou inférieure quand vous le souhaitez depuis votre tableau de bord." }
+      ]
+    },
+    "finalCta": {
+      "title": "Prêt à lancer votre agent IA ?",
+      "subtitle": "Commencez gratuitement, sans carte bancaire.",
+      "cta": "Commencer gratuitement"
     }
+  },
+  "about": {
+    "title": "À propos de MjimsAI",
+    "subtitle": "Nous rendons l'IA conversationnelle accessible à toutes les entreprises, sans complexité technique.",
+    "mission": {
+      "title": "Notre mission",
+      "body": "MjimsAI permet à n'importe quelle entreprise de déployer un agent IA fiable, ancré dans ses propres données, sur tous ses canaux — site web, WhatsApp et au-delà. Nous croyons que créer un assistant intelligent devrait prendre quelques minutes, pas plusieurs mois."
+    },
+    "values": {
+      "title": "Nos valeurs",
+      "v1": { "title": "Liberté de choix", "desc": "Multi-provider par conception : utilisez le modèle et la clé API qui vous conviennent, sans verrouillage." },
+      "v2": { "title": "Sécurité d'abord", "desc": "Clés chiffrées, webhooks signés, isolation par locataire. Vos données et celles de vos clients sont protégées." },
+      "v3": { "title": "Accessible partout", "desc": "Multilingue et multi-canal, pensé aussi bien pour l'Europe que pour l'Afrique de l'Ouest." }
+    },
+    "tech": {
+      "title": "Notre technologie",
+      "body": "Construit sur une stack moderne — FastAPI, Next.js et les meilleurs modèles de langage du marché. Une architecture pensée pour la fiabilité, la performance et la conformité."
+    },
+    "cta": {
+      "title": "Rejoignez les entreprises qui automatisent leur relation client.",
+      "button": "Créer mon compte"
+    }
+  },
+  "contact": {
+    "title": "Contactez-nous",
+    "subtitle": "Une question, une démo, un partenariat ? Écrivez-nous, nous répondons rapidement.",
+    "name": "Nom",
+    "email": "Email",
+    "subject": "Sujet",
+    "message": "Message",
+    "submit": "Envoyer le message",
+    "sending": "Envoi...",
+    "success": "Message envoyé ! Nous vous répondrons dès que possible.",
+    "error": "L'envoi a échoué. Réessayez plus tard.",
+    "again": "Envoyer un autre message",
+    "errors": {
+      "required": "Ce champ est requis.",
+      "email": "Adresse email invalide."
+    }
+  },
+  "footer": {
+    "tagline": "La plateforme pour créer et déployer des agents IA conversationnels sur tous vos canaux.",
+    "product": "Produit",
+    "company": "Entreprise",
+    "account": "Compte",
+    "features": "Fonctionnalités",
+    "how": "Comment ça marche",
+    "rights": "Tous droits réservés."
   },
   "pricing": {
     "title": "Des tarifs simples et transparents",

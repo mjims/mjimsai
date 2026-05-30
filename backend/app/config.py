@@ -55,6 +55,9 @@ class Settings(BaseSettings):
     OTP_MAX_ATTEMPTS: int = 5
     INVITE_TTL_HOURS: int = 48
 
+    # Inbox for the public contact form (falls back to ADMIN_EMAIL).
+    CONTACT_EMAIL: Optional[str] = None
+
     # Public URLs (for links inside emails)
     FRONTEND_URL: str = "http://localhost:3000"
     BACKOFFICE_URL: str = "http://localhost:3001"
@@ -71,6 +74,9 @@ class Settings(BaseSettings):
     GOOGLE_API_KEY: Optional[str] = None
     XAI_API_KEY: Optional[str] = None  # Grok (xAI)
     DEEPSEEK_API_KEY: Optional[str] = None
+
+    # --- WhatsApp (Meta Cloud API) ---
+    WHATSAPP_GRAPH_VERSION: str = "v21.0"
 
     # --- Encryption (Fernet) for per-agent API keys ---
     # Generate: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"

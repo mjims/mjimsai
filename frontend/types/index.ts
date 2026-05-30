@@ -37,9 +37,33 @@ export interface Plan {
   features: string[];
   is_active: boolean;
   sort_order: number;
+  whatsapp_enabled?: boolean;
+  voice_enabled?: boolean;
 }
 
 export type BillingPeriod = "monthly" | "semiannual" | "annual";
+
+// --- WhatsApp channel (per-agent) ---
+export interface WhatsAppConfig {
+  allowed: boolean;
+  is_enabled: boolean;
+  phone_number_id: string | null;
+  display_phone_number: string | null;
+  verify_token: string;
+  webhook_path: string;
+  access_token_masked: string | null;
+  app_secret_masked: string | null;
+  access_token_set: boolean;
+  app_secret_set: boolean;
+}
+
+export interface WhatsAppConfigUpdate {
+  is_enabled?: boolean;
+  phone_number_id?: string;
+  display_phone_number?: string;
+  access_token?: string;
+  app_secret?: string;
+}
 
 // --- Agent ---
 export interface WidgetConfig {

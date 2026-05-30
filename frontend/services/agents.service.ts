@@ -1,5 +1,5 @@
 import apiClient from "@/lib/axios";
-import type { Agent, AgentCreate, AgentListResponse, AgentUpdate, ProvidersMap } from "@/types";
+import type { Agent, AgentCreate, AgentListResponse, AgentUpdate, ProvidersMap, WhatsAppConfig, WhatsAppConfigUpdate } from "@/types";
 
 export const agentsService = {
   async list(skip = 0, limit = 50): Promise<AgentListResponse> {
@@ -38,6 +38,16 @@ export const agentsService = {
 
   async removeApiKey(id: string): Promise<Agent> {
     const { data } = await apiClient.put<Agent>(`/api/v1/agents/${id}`, { remove_api_key: true });
+    return data;
+  },
+
+  async getWhatsApp(id: string): Promise<WhatsAppConfig> {
+    const { data } = await apiClient.get<WhatsAppConfig>(`/api/v1/agents/${id}/whatsapp`);
+    return data;
+  },
+
+  async updateWhatsApp(id: string, payload: WhatsAppConfigUpdate): Promise<WhatsAppConfig> {
+    const { data } = await apiClient.put<WhatsAppConfig>(`/api/v1/agents/${id}/whatsapp`, payload);
     return data;
   },
 };

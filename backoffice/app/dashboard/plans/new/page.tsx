@@ -9,14 +9,14 @@ type FormData = {
   name: string; label: string; conversations_limit: string;
   price_monthly_eur: string; price_semiannual_eur: string; price_annual_eur: string;
   price_monthly_xof: string; price_semiannual_xof: string; price_annual_xof: string;
-  features: string; is_active: boolean; sort_order: string;
+  features: string; is_active: boolean; sort_order: string; whatsapp_enabled: boolean; voice_enabled: boolean;
 };
 
 const INIT: FormData = {
   name: "", label: "", conversations_limit: "100",
   price_monthly_eur: "", price_semiannual_eur: "", price_annual_eur: "",
   price_monthly_xof: "", price_semiannual_xof: "", price_annual_xof: "",
-  features: "", is_active: true, sort_order: "0",
+  features: "", is_active: true, sort_order: "0", whatsapp_enabled: false, voice_enabled: false,
 };
 
 export default function NewPlanPage() {
@@ -45,6 +45,8 @@ export default function NewPlanPage() {
         features: form.features.split("\n").map((f) => f.trim()).filter(Boolean),
         is_active: form.is_active,
         sort_order: parseInt(form.sort_order) || 0,
+        whatsapp_enabled: form.whatsapp_enabled,
+        voice_enabled: form.voice_enabled,
       });
       router.push("/dashboard/plans");
     } catch (err) { setError(getApiError(err)); }
@@ -131,6 +133,22 @@ export default function NewPlanPage() {
             <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${form.is_active ? "translate-x-4" : "translate-x-0"}`} />
           </button>
           <span className="text-sm text-surface-700">Plan actif (visible par les utilisateurs)</span>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={() => set("whatsapp_enabled", !form.whatsapp_enabled)}
+            className={`w-10 h-6 rounded-full p-0.5 transition-colors ${form.whatsapp_enabled ? "bg-emerald-500" : "bg-surface-300"}`}>
+            <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${form.whatsapp_enabled ? "translate-x-4" : "translate-x-0"}`} />
+          </button>
+          <span className="text-sm text-surface-700">Intégration WhatsApp incluse</span>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={() => set("voice_enabled", !form.voice_enabled)}
+            className={`w-10 h-6 rounded-full p-0.5 transition-colors ${form.voice_enabled ? "bg-emerald-500" : "bg-surface-300"}`}>
+            <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${form.voice_enabled ? "translate-x-4" : "translate-x-0"}`} />
+          </button>
+          <span className="text-sm text-surface-700">Messages vocaux (transcription audio) inclus</span>
         </div>
 
         {error && <p className="text-sm text-red-600 bg-red-50 p-3 rounded-xl border border-red-200">{error}</p>}
