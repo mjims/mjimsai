@@ -7,6 +7,8 @@ import { useTranslations } from "next-intl";
 import { agentsService } from "@/services/agents.service";
 import { knowledgeService } from "@/services/knowledge.service";
 import { billingService } from "@/services/billing.service";
+import { useAuth } from "@/context/AuthContext";
+import AgentTestChat from "@/components/agents/agent-test-chat";
 import { getApiError } from "@/lib/axios";
 import type { Agent, AgentSubscription, BillingPeriod, KnowledgeDocument, PaymentMethods, Plan, SebpayCountry, SebpayOperatorOption } from "@/types";
 
@@ -36,7 +38,9 @@ export default function AgentDetailPage() {
   const searchParams = useSearchParams();
   const t = useTranslations("agents");
   const tCommon = useTranslations("common");
+  const { user } = useAuth();
 
+  const [testOpen, setTestOpen] = useState(false);
   const [agent, setAgent] = useState<Agent | null>(null);
   const [tab, setTab] = useState<Tab>((searchParams.get("tab") as Tab) || "config");
   const [docs, setDocs] = useState<KnowledgeDocument[]>([]);
@@ -202,7 +206,7 @@ export default function AgentDetailPage() {
   ];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className={`mx-auto space-y-6 ${tab === "config" ? "max-w-6xl" : "max-w-4xl"}`}>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-surface-900">{agent.name}</h1>
@@ -225,6 +229,7 @@ export default function AgentDetailPage() {
 
       {/* Config */}
       {tab === "config" && (
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_400px] gap-6 items-start">
         <form onSubmit={handleSave} className="bg-white rounded-2xl border border-surface-200 p-6 space-y-5">
           <h2 className="text-lg font-semibold">Configuration</h2>
           {[
@@ -258,11 +263,27 @@ export default function AgentDetailPage() {
             </div>
           </div>
           {saveError && <p className="text-sm text-red-600">{saveError}</p>}
-          <button type="submit" disabled={saving}
-            className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl disabled:opacity-60">
-            {saving ? "..." : tCommon("save")}
-          </button>
+          <div className="flex items-center gap-3">
+            <button type="submit" disabled={saving}
+              className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl disabled:opacity-60">
+              {saving ? "..." : tCommon("save")}
+            </button>
+            <span className="text-xs text-surface-400">Enregistrez pour tester vos changements.</span>
+          </div>
         </form>
+
+        {/* Live test panel (large screens) */}
+        <aside className="hidden lg:block sticky top-6 h-[78vh]">
+          {user?.api_key ? (
+            <AgentTestChat agentSlug={agent.slug} apiKey={user.api_key}
+              welcomeMessage={agent.welcome_message} primaryColor={agent.widget_config?.primary_color} />
+          ) : (
+            <div className="h-full flex items-center justify-center text-center text-sm text-surface-400 bg-white rounded-2xl border border-surface-200 p-6">
+              Connectez-vous pour tester l&apos;agent.
+            </div>
+          )}
+        </aside>
+      </div>
       )}
 
       {/* Knowledge */}
@@ -490,6 +511,28 @@ export default function AgentDetailPage() {
             Trouvez votre <code className="font-mono text-xs">data-api-key</code> dans <strong>Paramètres → Mon Compte</strong>.
           </p>
         </div>
+      )}
+
+      {/* Live test — floating button + drawer (small screens, config tab only) */}
+      {tab === "config" && user?.api_key && (
+        <>
+          <button onClick={() => setTestOpen(true)}
+            className="lg:hidden fixed bottom-6 right-6 z-40 px-5 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-full shadow-lg text-sm font-medium">
+            💬 Tester
+          </button>
+          {testOpen && (
+            <div className="lg:hidden fixed inset-0 z-50 bg-black/40 flex flex-col">
+              <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-surface-100">
+                <p className="font-semibold text-surface-900">Test de l&apos;agent</p>
+                <button onClick={() => setTestOpen(false)} className="text-surface-500 hover:text-surface-900 text-sm">Fermer ✕</button>
+              </div>
+              <div className="flex-1 min-h-0 bg-white">
+                <AgentTestChat agentSlug={agent.slug} apiKey={user.api_key}
+                  welcomeMessage={agent.welcome_message} primaryColor={agent.widget_config?.primary_color} />
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
