@@ -12,11 +12,25 @@ from app.services.llm.base import BaseLLMProvider, LLMConfig, LLMMessage, LLMRes
 logger = logging.getLogger(__name__)
 
 
+def _temperature_rejected(err: Exception) -> bool:
+    """Some newer Claude models reject the `temperature` parameter."""
+    return "temperature" in str(err).lower()
+
+
 class AnthropicProvider(BaseLLMProvider):
     provider_name = "anthropic"
 
     def __init__(self, api_key: str):
         self.client = anthropic.AsyncAnthropic(api_key=api_key)
+
+    def _build_kwargs(self, config: LLMConfig, api_messages: list[dict]) -> dict:
+        return {
+            "model": config.model,
+            "max_tokens": config.max_tokens,
+            "temperature": config.temperature,
+            "system": config.system_prompt or "",
+            "messages": api_messages,
+        }
 
     async def chat(
         self,
@@ -30,13 +44,16 @@ class AnthropicProvider(BaseLLMProvider):
             if m.role != "system"
         ]
 
-        response = await self.client.messages.create(
-            model=config.model,
-            max_tokens=config.max_tokens,
-            temperature=config.temperature,
-            system=config.system_prompt or "",
-            messages=api_messages,
-        )
+        kwargs = self._build_kwargs(config, api_messages)
+        try:
+            response = await self.client.messages.create(**kwargs)
+        except anthropic.BadRequestError as e:
+            if "temperature" in kwargs and _temperature_rejected(e):
+                logger.info("Model %s rejects `temperature`; retrying without it.", config.model)
+                kwargs.pop("temperature", None)
+                response = await self.client.messages.create(**kwargs)
+            else:
+                raise
 
         content = ""
         for block in response.content:
@@ -62,12 +79,17 @@ class AnthropicProvider(BaseLLMProvider):
             if m.role != "system"
         ]
 
-        async with self.client.messages.stream(
-            model=config.model,
-            max_tokens=config.max_tokens,
-            temperature=config.temperature,
-            system=config.system_prompt or "",
-            messages=api_messages,
-        ) as stream:
-            async for text in stream.text_stream:
-                yield text
+        kwargs = self._build_kwargs(config, api_messages)
+        try:
+            async with self.client.messages.stream(**kwargs) as stream:
+                async for text in stream.text_stream:
+                    yield text
+        except anthropic.BadRequestError as e:
+            if "temperature" in kwargs and _temperature_rejected(e):
+                logger.info("Model %s rejects `temperature`; retrying without it.", config.model)
+                kwargs.pop("temperature", None)
+                async with self.client.messages.stream(**kwargs) as stream:
+                    async for text in stream.text_stream:
+                        yield text
+            else:
+                raise
